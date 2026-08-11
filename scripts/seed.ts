@@ -6,16 +6,17 @@
  *
  * Requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local
  *
- * Demo employee PIN: 1234
+ * Demo employee PIN: 1234 (Auth stores prefixed form via pinToAuthPassword)
  * Demo admin password: SEED_ADMIN_PASSWORD env, or AdminPass123!
  *
  * Admin authenticates with email + password (Supabase Auth).
- * Employees authenticate with Name + PIN (PIN is the Auth password).
+ * Employees authenticate with Name + PIN (UX unchanged; Auth password is prefixed).
  */
 
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
+import { pinToAuthPassword } from "../src/lib/auth/pin";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -52,7 +53,7 @@ const SEED_USERS = [
     department: "Administration",
     allowed_break_minutes: 60,
     role: "admin" as const,
-    password: DEMO_ADMIN_PASSWORD,
+    authPassword: DEMO_ADMIN_PASSWORD,
   },
   {
     employee_id: "EMP001",
@@ -61,7 +62,7 @@ const SEED_USERS = [
     department: "Development",
     allowed_break_minutes: 60,
     role: "employee" as const,
-    password: DEMO_EMPLOYEE_PIN,
+    authPassword: pinToAuthPassword(DEMO_EMPLOYEE_PIN),
   },
   {
     employee_id: "EMP002",
@@ -70,7 +71,7 @@ const SEED_USERS = [
     department: "Development",
     allowed_break_minutes: 60,
     role: "employee" as const,
-    password: DEMO_EMPLOYEE_PIN,
+    authPassword: pinToAuthPassword(DEMO_EMPLOYEE_PIN),
   },
   {
     employee_id: "EMP003",
@@ -79,7 +80,7 @@ const SEED_USERS = [
     department: "Design",
     allowed_break_minutes: 45,
     role: "employee" as const,
-    password: DEMO_EMPLOYEE_PIN,
+    authPassword: pinToAuthPassword(DEMO_EMPLOYEE_PIN),
   },
   {
     employee_id: "EMP004",
@@ -88,7 +89,7 @@ const SEED_USERS = [
     department: "Operations",
     allowed_break_minutes: 60,
     role: "employee" as const,
-    password: DEMO_EMPLOYEE_PIN,
+    authPassword: pinToAuthPassword(DEMO_EMPLOYEE_PIN),
   },
   {
     employee_id: "EMP005",
@@ -97,7 +98,7 @@ const SEED_USERS = [
     department: "HR",
     allowed_break_minutes: 30,
     role: "employee" as const,
-    password: DEMO_EMPLOYEE_PIN,
+    authPassword: pinToAuthPassword(DEMO_EMPLOYEE_PIN),
   },
 ];
 
@@ -130,7 +131,7 @@ async function main() {
     if (!userId) {
       const { data, error } = await supabase.auth.admin.createUser({
         email: user.email,
-        password: user.password,
+        password: user.authPassword,
         email_confirm: true,
         user_metadata: { full_name: user.full_name },
       });
@@ -142,7 +143,7 @@ async function main() {
       console.log(`Created auth user: ${user.full_name}`);
     } else {
       await supabase.auth.admin.updateUserById(userId, {
-        password: user.password,
+        password: user.authPassword,
       });
       console.log(`Auth user exists, credentials reset: ${user.full_name}`);
     }

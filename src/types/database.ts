@@ -304,14 +304,6 @@ export interface Database {
         };
         Returns: Database["public"]["Tables"]["employees"]["Row"];
       };
-      is_admin: {
-        Args: Record<PropertyKey, never>;
-        Returns: boolean;
-      };
-      is_active_employee: {
-        Args: Record<PropertyKey, never>;
-        Returns: boolean;
-      };
     };
     Enums: {
       user_role: UserRole;

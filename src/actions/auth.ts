@@ -9,6 +9,7 @@ import {
   requireActiveEmployee,
   requireAdminSession,
 } from "@/lib/auth/guards";
+import { pinToAuthPassword } from "@/lib/auth/pin";
 
 export type ActionResult<T = undefined> =
   | { success: true; data?: T; message?: string }
@@ -62,13 +63,20 @@ export async function loginWithPin(
   }
 
   const supabase = await createClient();
-  const { error: authError } = await supabase.auth.signInWithPassword({
+  // Prefer prefixed Auth password (HIBP-safe). Fall back to legacy raw PIN.
+  const primary = await supabase.auth.signInWithPassword({
     email: employee.email,
-    password: pin,
+    password: pinToAuthPassword(pin),
   });
 
-  if (authError) {
-    return { success: false, error: "Incorrect PIN. Please try again." };
+  if (primary.error) {
+    const legacy = await supabase.auth.signInWithPassword({
+      email: employee.email,
+      password: pin,
+    });
+    if (legacy.error) {
+      return { success: false, error: "Incorrect PIN. Please try again." };
+    }
   }
 
   revalidatePath("/", "layout");

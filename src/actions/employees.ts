@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { requireAdmin, type ActionResult } from "@/actions/auth";
-import { generateTemporaryPin, isValidPin } from "@/lib/auth/pin";
+import { generateTemporaryPin, isValidPin, pinToAuthPassword, isLikelyLeakedPasswordError } from "@/lib/auth/pin";
 import { revalidatePath } from "next/cache";
 import type { Employee, UserRole } from "@/types/database";
 import {
@@ -172,23 +172,43 @@ export async function createEmployee(input: {
     }
 
     // PIN is stored hashed by Supabase Auth — never plain-text in employees.
-    const { data: authUser, error: authError } =
-      await service.auth.admin.createUser({
+    // Auth password uses a prefixed form so HIBP can stay enabled for admin passwords.
+    let authPassword = pinToAuthPassword(temporaryPin);
+    let workingPin = temporaryPin;
+    let createdUserId: string | null = null;
+    let authError: { message?: string; code?: string } | null = null;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const created = await service.auth.admin.createUser({
         email,
-        password: temporaryPin,
+        password: authPassword,
         email_confirm: true,
         user_metadata: {
           full_name: input.full_name.trim(),
           department: input.department.trim(),
         },
       });
+      authError = created.error;
+      createdUserId = created.data.user?.id ?? null;
 
-    if (authError || !authUser.user) {
+      if (!authError && createdUserId) break;
+
+      if (
+        pinWasGenerated &&
+        isLikelyLeakedPasswordError(authError?.message) &&
+        attempt < 4
+      ) {
+        workingPin = generateTemporaryPin();
+        authPassword = pinToAuthPassword(workingPin);
+        continue;
+      }
+      break;
+    }
+
+    if (authError || !createdUserId) {
       const message = authError
         ? `Supabase Auth: ${authError.message}${
-            (authError as { code?: string }).code
-              ? ` (code=${(authError as { code?: string }).code})`
-              : ""
+            authError.code ? ` (code=${authError.code})` : ""
           }`
         : "Supabase Auth: createUser returned no user.";
       console.error("[createEmployee] createUser failed:", authError);
@@ -200,10 +220,11 @@ export async function createEmployee(input: {
       };
     }
 
-    createdAuthUserId = authUser.user.id;
+    const finalPin = workingPin;
+    createdAuthUserId = createdUserId;
 
     const profilePayload = {
-      id: authUser.user.id,
+      id: createdUserId,
       employee_id: input.employee_id.trim(),
       full_name: input.full_name.trim(),
       email,
@@ -218,7 +239,7 @@ export async function createEmployee(input: {
     const { data: existingProfile } = await service
       .from("employees")
       .select("id")
-      .eq("id", authUser.user.id)
+      .eq("id", createdUserId)
       .maybeSingle();
 
     let data: Employee | null = null;
@@ -241,7 +262,7 @@ export async function createEmployee(input: {
           role: profilePayload.role,
           is_active: profilePayload.is_active,
         })
-        .eq("id", authUser.user.id)
+        .eq("id", createdUserId)
         .select(employeeSelect())
         .single();
       data = updated.data as Employee | null;
@@ -291,7 +312,7 @@ export async function createEmployee(input: {
       success: true,
       data: {
         employee: data,
-        temporaryPin,
+        temporaryPin: finalPin,
         pinWasGenerated,
       },
       message: "Employee created successfully",
@@ -425,9 +446,23 @@ export async function resetEmployeePin(
     }
 
     const temporaryPin = generateTemporaryPin();
-    const { error } = await service.auth.admin.updateUserById(id, {
-      password: temporaryPin,
-    });
+    let authPassword = pinToAuthPassword(temporaryPin);
+    let workingPin = temporaryPin;
+    let error: { message?: string } | null = null;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const updated = await service.auth.admin.updateUserById(id, {
+        password: authPassword,
+      });
+      error = updated.error;
+      if (!error) break;
+      if (isLikelyLeakedPasswordError(error.message) && attempt < 4) {
+        workingPin = generateTemporaryPin();
+        authPassword = pinToAuthPassword(workingPin);
+        continue;
+      }
+      break;
+    }
 
     if (error) {
       console.error("[resetEmployeePin] Auth update failed:", error);
@@ -440,7 +475,7 @@ export async function resetEmployeePin(
     return {
       success: true,
       data: {
-        temporaryPin,
+        temporaryPin: workingPin,
         employee: employee as unknown as Employee,
       },
       message: "New temporary PIN generated.",

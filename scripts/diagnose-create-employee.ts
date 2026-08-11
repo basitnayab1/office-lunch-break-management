@@ -5,6 +5,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
+import { pinToAuthPassword } from "../src/lib/auth/pin";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -44,10 +45,11 @@ async function main() {
   console.log("--- Step 1: createUser ---");
   console.log({ email, pin, employee_id, full_name });
 
+  const authPassword = pinToAuthPassword(pin);
   const { data: authData, error: authError } =
     await supabase.auth.admin.createUser({
       email,
-      password: pin,
+      password: authPassword,
       email_confirm: true,
       user_metadata: { full_name },
     });
@@ -125,7 +127,7 @@ async function main() {
   });
   const { data: signIn, error: signErr } = await anon.auth.signInWithPassword({
     email,
-    password: pin,
+    password: authPassword,
   });
   console.log(
     signErr

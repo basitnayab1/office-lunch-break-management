@@ -43,8 +43,24 @@ In the Supabase SQL Editor, run in order:
 4. `supabase/migrations/004_admin_auth_profiles.sql` (admin Auth profile trigger + role security)
 5. `supabase/migrations/005_fix_employee_create_triggers.sql` (harden Auth→employees create path)
 6. `supabase/migrations/006_break_warning_settings.sql` (break warning alarm + optional test mode)
+7. `supabase/migrations/007_security_hardening.sql` (function `search_path` + least-privilege EXECUTE)
+8. `supabase/migrations/008_security_advisor_residual.sql` (optional; superseded by 009)
+9. `supabase/migrations/009_remove_security_definer_helpers.sql` (clear SECURITY DEFINER helper Advisor warnings)
 
 Enable **Realtime** for `break_sessions` if the publication line did not apply automatically (Database → Replication).
+
+### Security hardening (007–009)
+
+Migration `007` locks down trigger/internal functions and sets `search_path`.
+
+Migration `009` removes the remaining SECURITY DEFINER helper warnings without weakening RLS:
+
+- `private.employee_claims` — own-row role/active flags used by RLS (avoids recursion on `employees`)
+- `public.employee_login_directory` — login picker columns only (no email/PIN)
+- `list_active_employees_for_login` — `SECURITY INVOKER` over the directory table
+- `is_admin` / `is_active_employee` — dropped; policies and role guards use `private.employee_claims`
+
+HIBP/leaked-password protection is intentionally left disabled until the Pro plan (Auth Dashboard setting, not SQL).
 
 ### First admin account (production)
 

@@ -62,17 +62,22 @@ export async function getMyBreakHistory(limit = 30): Promise<BreakSession[]> {
   const employee = await requireEmployee();
   const supabase = await createClient();
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("break_sessions")
     .select(
-      "id, employee_id, break_date, break_type, started_at, ended_at, allowed_minutes, actual_minutes, actual_seconds, extra_minutes, extra_seconds, status, synced_to_sheet, sheet_sync_status, created_at, updated_at"
+      "id, employee_id, break_date, break_type, started_at, ended_at, allowed_minutes, actual_minutes, actual_seconds, extra_minutes, extra_seconds, status, google_sheet_sync_status, google_sheet_row_id, google_sheet_synced_at, google_sheet_error, created_at, updated_at"
     )
     .eq("employee_id", employee.id)
     .neq("status", "active")
     .order("started_at", { ascending: false })
     .limit(limit);
 
-  return data ?? [];
+  if (error) {
+    console.error("[getMyBreakHistory]", error.message, error.code, error.details);
+    return [];
+  }
+
+  return (data as BreakSession[] | null) ?? [];
 }
 
 export async function startBreak(

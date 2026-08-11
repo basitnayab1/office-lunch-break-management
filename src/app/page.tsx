@@ -1,38 +1,34 @@
 import { LoginForm } from "@/components/auth/login-form";
-import { LoginHero } from "@/components/auth/login-hero";
-import { createServiceClient } from "@/lib/supabase/admin";
+import { LoginHeroDeferred } from "@/components/auth/login-hero-deferred";
+import { createClient } from "@/lib/supabase/server";
+import { getCachedOfficeName } from "@/lib/login/office-name";
+import type { EmployeeLoginOption } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
-async function getOfficeName() {
+async function getLoginEmployees(): Promise<EmployeeLoginOption[]> {
   try {
-    if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      !process.env.SUPABASE_SERVICE_ROLE_KEY
-    ) {
-      return "Lunch Break";
-    }
-    const supabase = createServiceClient();
-    const { data } = await supabase
-      .from("office_settings")
-      .select("office_name")
-      .eq("id", 1)
-      .maybeSingle();
-    return data?.office_name ?? "Lunch Break";
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("list_active_employees_for_login");
+    if (error || !data) return [];
+    return data as EmployeeLoginOption[];
   } catch {
-    return "Lunch Break";
+    return [];
   }
 }
 
 export default async function HomePage() {
-  const officeName = await getOfficeName();
+  const [officeName, employees] = await Promise.all([
+    getCachedOfficeName(),
+    getLoginEmployees(),
+  ]);
 
   return (
     <main className="min-h-screen bg-[var(--bg-elevated)] lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(380px,0.85fr)]">
-      <LoginHero />
+      <LoginHeroDeferred />
 
       <section className="relative flex min-h-[70vh] flex-1 items-center justify-center px-5 py-10 sm:px-8 md:min-h-[calc(100vh-14rem)] lg:min-h-screen lg:px-12">
-        <LoginForm officeName={officeName} />
+        <LoginForm officeName={officeName} initialEmployees={employees} />
       </section>
     </main>
   );

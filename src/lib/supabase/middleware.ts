@@ -9,7 +9,42 @@ function jsonForbidden(message = "Forbidden. Admin access required.") {
   return NextResponse.json({ ok: false, message }, { status: 403 });
 }
 
+/** True when a Supabase auth session cookie is present (value may still be expired). */
+function hasLikelyAuthCookie(request: NextRequest) {
+  return request.cookies
+    .getAll()
+    .some(
+      (cookie) =>
+        cookie.name.includes("auth-token") &&
+        typeof cookie.value === "string" &&
+        cookie.value.length > 20
+    );
+}
+
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const isEmployeeAuthPage = pathname === "/" || pathname.startsWith("/login");
+  const isAdminLogin = pathname === "/admin/login";
+  const isAdminPanel = pathname.startsWith("/admin") && !isAdminLogin;
+  const isAdminApi =
+    pathname.startsWith("/api/admin") ||
+    pathname.startsWith("/api/google-sheets");
+  const isEmployeeRoute = pathname.startsWith("/dashboard");
+  const isApi = pathname.startsWith("/api");
+  const isPublicAsset =
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    /\.[a-zA-Z0-9]+$/.test(pathname);
+
+  // Fast path: public auth pages with no session cookie skip Auth/DB round-trips.
+  if (
+    !hasLikelyAuthCookie(request) &&
+    (isEmployeeAuthPage || isAdminLogin) &&
+    !isApi
+  ) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -37,20 +72,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
-  const isEmployeeAuthPage = pathname === "/" || pathname.startsWith("/login");
-  const isAdminLogin = pathname === "/admin/login";
-  const isAdminPanel = pathname.startsWith("/admin") && !isAdminLogin;
-  const isAdminApi =
-    pathname.startsWith("/api/admin") ||
-    pathname.startsWith("/api/google-sheets");
-  const isEmployeeRoute = pathname.startsWith("/dashboard");
-  const isApi = pathname.startsWith("/api");
-  const isPublicAsset =
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    /\.[a-zA-Z0-9]+$/.test(pathname);
 
   if (isPublicAsset) {
     return supabaseResponse;

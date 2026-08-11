@@ -1,7 +1,19 @@
+import nextDynamic from "next/dynamic";
 import { getDailyReport, getMonthlyReport } from "@/actions/reports";
 import { getOfficeSettings } from "@/actions/settings";
-import { ReportsPanel } from "@/components/admin/reports-panel";
 import { todayInTimezone } from "@/lib/time/timezone";
+
+const ReportsPanel = nextDynamic(
+  () =>
+    import("@/components/admin/reports-panel").then((m) => ({
+      default: m.ReportsPanel,
+    })),
+  {
+    loading: () => (
+      <div className="h-96 animate-pulse rounded-2xl border border-[var(--line)] bg-white/60" />
+    ),
+  }
+);
 
 export const dynamic = "force-dynamic";
 

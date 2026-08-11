@@ -64,7 +64,9 @@ export async function getMyBreakHistory(limit = 30): Promise<BreakSession[]> {
 
   const { data } = await supabase
     .from("break_sessions")
-    .select("*")
+    .select(
+      "id, employee_id, break_date, break_type, started_at, ended_at, allowed_minutes, actual_minutes, actual_seconds, extra_minutes, extra_seconds, status, synced_to_sheet, sheet_sync_status, created_at, updated_at"
+    )
     .eq("employee_id", employee.id)
     .neq("status", "active")
     .order("started_at", { ascending: false })

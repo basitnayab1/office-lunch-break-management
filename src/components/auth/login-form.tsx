@@ -1,33 +1,28 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { loginWithPin, listEmployeesForLogin } from "@/actions/auth";
+import { loginWithPin } from "@/actions/auth";
 import type { EmployeeLoginOption } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/field";
-import { LunchBreakMark } from "@/components/brand/lunch-break-mark";
+import { BiteStationLogo } from "@/components/brand/bite-station-logo";
 
-export function LoginForm({ officeName }: { officeName: string }) {
+export function LoginForm({
+  officeName,
+  initialEmployees = [],
+}: {
+  officeName: string;
+  initialEmployees?: EmployeeLoginOption[];
+}) {
   const router = useRouter();
-  const [employees, setEmployees] = useState<EmployeeLoginOption[]>([]);
+  const [employees] = useState<EmployeeLoginOption[]>(initialEmployees);
   const [employeeId, setEmployeeId] = useState("");
   const [pin, setPin] = useState("");
-  const [loadingList, setLoadingList] = useState(true);
   const [pending, startTransition] = useTransition();
-
-  useEffect(() => {
-    listEmployeesForLogin().then((res) => {
-      if (res.success && res.data) {
-        setEmployees(res.data);
-      } else {
-        toast.error(res.success ? "No employees found." : res.error);
-      }
-      setLoadingList(false);
-    });
-  }, []);
+  const listReady = employees.length > 0;
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,15 +42,16 @@ export function LoginForm({ officeName }: { officeName: string }) {
   return (
     <div className="animate-rise mx-auto w-full max-w-[420px]">
       <div className="mb-8">
-        <div className="flex items-center gap-3 text-[var(--brand)]">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--brand-soft)]">
-            <LunchBreakMark size={30} />
-          </span>
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em]">
-              Lunch Break
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          <BiteStationLogo size={88} priority className="shrink-0 drop-shadow-sm" />
+          <div className="min-w-0">
+            <p className="text-lg font-semibold tracking-wide text-[var(--brand)]">
+              Bite Station
             </p>
-            <p className="text-xs text-[var(--ink-muted)]">{officeName}</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+              Eat · Relax · Recharge
+            </p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">{officeName}</p>
           </div>
         </div>
 
@@ -74,12 +70,12 @@ export function LoginForm({ officeName }: { officeName: string }) {
             id="employee"
             value={employeeId}
             onChange={(e) => setEmployeeId(e.target.value)}
-            disabled={loadingList || pending}
+            disabled={pending || !listReady}
             required
             className="h-12"
           >
             <option value="">
-              {loadingList ? "Loading..." : "Select employee"}
+              {listReady ? "Select employee" : "No employees available"}
             </option>
             {employees.map((emp) => (
               <option key={emp.id} value={emp.id}>

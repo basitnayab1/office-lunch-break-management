@@ -5,6 +5,7 @@ import { getOfficeSettings } from "@/actions/settings";
 import { BreakControl } from "@/components/employee/break-control";
 import { BreakHistoryList } from "@/components/employee/break-history";
 import { Button } from "@/components/ui/button";
+import { BiteStationBrand } from "@/components/brand/bite-station-logo";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,8 @@ export default async function EmployeeDashboardPage() {
     <main className="mx-auto min-h-screen max-w-4xl px-4 py-8 md:px-6">
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">
+          <BiteStationBrand logoSize={48} />
+          <p className="mt-3 text-sm font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">
             {settings.office_name}
           </p>
           <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight">

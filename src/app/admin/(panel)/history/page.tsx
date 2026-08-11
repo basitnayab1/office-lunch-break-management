@@ -1,8 +1,20 @@
+import nextDynamic from "next/dynamic";
 import { listEmployees } from "@/actions/employees";
 import { getBreakHistory } from "@/actions/reports";
 import { getOfficeSettings } from "@/actions/settings";
-import { BreakHistoryPanel } from "@/components/admin/break-history-panel";
 import { todayInTimezone } from "@/lib/time/timezone";
+
+const BreakHistoryPanel = nextDynamic(
+  () =>
+    import("@/components/admin/break-history-panel").then((m) => ({
+      default: m.BreakHistoryPanel,
+    })),
+  {
+    loading: () => (
+      <div className="h-96 animate-pulse rounded-2xl border border-[var(--line)] bg-white/60" />
+    ),
+  }
+);
 
 export const dynamic = "force-dynamic";
 

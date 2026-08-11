@@ -1,45 +1,51 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Source_Sans_3, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "sonner";
-import { PwaRegister } from "@/components/pwa/pwa-register";
-import { PwaInstallHost } from "@/components/pwa/pwa-install-button";
+import { DeferredPwa } from "@/components/pwa/deferred-pwa";
 import "./globals.css";
 
 const display = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
+  display: "swap",
+  preload: true,
 });
 
 const body = Source_Sans_3({
   subsets: ["latin"],
   variable: "--font-body",
+  display: "swap",
+  preload: true,
 });
 
 const mono = IBM_Plex_Mono({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["500", "600"],
   variable: "--font-mono",
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
-  applicationName: "Office Break Management",
+  applicationName: "Bite Station",
   title: {
-    default: "Office Break Management",
-    template: "%s · Office Break Management",
+    default: "Bite Station",
+    template: "%s · Bite Station",
   },
   description:
-    "Track and manage employee lunch breaks with timed alarms and office reporting.",
+    "Bite Station — track and manage employee lunch breaks with timed alarms and office reporting.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Break Management",
+    title: "Bite Station",
   },
   formatDetection: {
     telephone: false,
   },
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
@@ -64,8 +70,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${display.variable} ${body.variable} ${mono.variable} antialiased`}>
         {children}
-        <PwaRegister />
-        <PwaInstallHost />
+        <DeferredPwa />
         <Toaster richColors position="top-center" />
       </body>
     </html>

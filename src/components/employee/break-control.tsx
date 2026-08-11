@@ -150,7 +150,7 @@ export function BreakControl({
       if (warningNotifiedForId.current !== activeBreak.id) {
         warningNotifiedForId.current = activeBreak.id;
         showBrowserNotification(
-          `${warningMinutes} MINUTE${warningMinutes === 1 ? "" : "S"} REMAINING`,
+          `Bite Station · ${warningMinutes} MINUTE${warningMinutes === 1 ? "" : "S"} REMAINING`,
           `Your ${breakTypeLabel(activeBreak.break_type)} break ends soon. Please wrap up.`
         );
       }
@@ -160,7 +160,7 @@ export function BreakControl({
         exceededNotifiedForId.current = activeBreak.id;
         warningNotifiedForId.current = activeBreak.id;
         showBrowserNotification(
-          "BREAK TIME EXCEEDED",
+          "Bite Station · BREAK TIME EXCEEDED",
           "Your allowed break time has ended. Overtime is now being tracked."
         );
       }

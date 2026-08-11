@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Testing
+coverage
+
+# Next.js
+.next/
+out/
+build
+dist
+
+# Misc
+.DS_Store
+.tools/
+*.tsbuildinfo
+next-env.d.ts
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env — never commit secrets
+.env
+.env*.local
+
+# Google Cloud / secrets — never commit service account keys
+*credentials*.json
+*service-account*.json
+google-service-account*.json
+secrets/
+*.pem
+
+# Vercel
+.vercel
+
+# IDE
+.idea
+.vscode

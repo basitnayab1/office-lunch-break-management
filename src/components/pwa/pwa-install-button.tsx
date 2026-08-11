@@ -1,0 +1,161 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
+function isIosDevice() {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent;
+  const iOS = /iPad|iPhone|iPod/.test(ua);
+  const iPadOs = ua.includes("Mac") && "ontouchend" in document;
+  return iOS || iPadOs;
+}
+
+function isStandaloneDisplay() {
+  if (typeof window === "undefined") return false;
+  const media = window.matchMedia("(display-mode: standalone)").matches;
+  const iosStandalone =
+    "standalone" in window.navigator &&
+    Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+  return media || iosStandalone;
+}
+
+/**
+ * Shows Install App when beforeinstallprompt is available (Chrome/Edge/Android),
+ * or iOS Add-to-Home-Screen instructions. Hidden when already installed / unsupported.
+ */
+export function PwaInstallButton({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
+  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
+    null
+  );
+  const [installed, setInstalled] = useState(false);
+  const [showIosHelp, setShowIosHelp] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  const ios = useMemo(() => isIosDevice(), []);
+
+  useEffect(() => {
+    if (isStandaloneDisplay()) {
+      setInstalled(true);
+      return;
+    }
+
+    const onBeforeInstall = (event: Event) => {
+      event.preventDefault();
+      setDeferred(event as BeforeInstallPromptEvent);
+    };
+
+    const onInstalled = () => {
+      setInstalled(true);
+      setDeferred(null);
+      setShowIosHelp(false);
+    };
+
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    window.addEventListener("appinstalled", onInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  if (installed || dismissed) return null;
+
+  // Chrome / Edge / Android Chromium
+  if (deferred) {
+    return (
+      <div className={cn("pointer-events-auto", className)}>
+        <Button
+          type="button"
+          variant={compact ? "secondary" : "primary"}
+          size={compact ? "md" : "lg"}
+          className={compact ? undefined : "shadow-[0_12px_28px_rgba(15,106,90,0.28)]"}
+          onClick={async () => {
+            try {
+              await deferred.prompt();
+              const choice = await deferred.userChoice;
+              if (choice.outcome === "accepted") {
+                setInstalled(true);
+              }
+            } catch (err) {
+              console.warn("[PWA] install prompt failed:", err);
+            } finally {
+              setDeferred(null);
+            }
+          }}
+        >
+          Install App
+        </Button>
+      </div>
+    );
+  }
+
+  // iOS Safari — cannot trigger native install prompt
+  if (ios) {
+    return (
+      <div className={cn("pointer-events-auto", className)}>
+        {!showIosHelp ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size={compact ? "md" : "lg"}
+            onClick={() => setShowIosHelp(true)}
+          >
+            Download App
+          </Button>
+        ) : (
+          <div className="max-w-xs rounded-2xl border border-[var(--line)] bg-[var(--bg-elevated)] p-4 text-left shadow-[var(--shadow)]">
+            <p className="text-sm font-semibold text-[var(--ink)]">
+              Install on iPhone / iPad
+            </p>
+            <p className="mt-2 text-sm text-[var(--ink-muted)]">
+              Tap <strong>Share</strong> → <strong>Add to Home Screen</strong>
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button
+                type="button"
+                size="md"
+                variant="secondary"
+                onClick={() => setShowIosHelp(false)}
+              >
+                Close
+              </Button>
+              <Button
+                type="button"
+                size="md"
+                variant="ghost"
+                onClick={() => setDismissed(true)}
+              >
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+/** Fixed corner host so install is available without redesigning pages. */
+export function PwaInstallHost() {
+  return (
+    <div className="pointer-events-none fixed bottom-4 right-4 z-[60] flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
+      <PwaInstallButton />
+    </div>
+  );
+}

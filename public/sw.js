@@ -1,4 +1,4 @@
-/* Office Break Management — safe PWA service worker
+/* Bite Station — safe PWA service worker
  *
  * Caches ONLY static shell assets (icons, offline page, hashed Next static files).
  * NEVER caches:
@@ -8,12 +8,13 @@
  * - Requests with Authorization / Cookie credentials beyond navigation
  */
 
-const VERSION = "obm-pwa-v1";
+const VERSION = "bite-station-pwa-v1";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 
 const PRECACHE_URLS = [
   "/offline.html",
+  "/bite-station-logo.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/apple-touch-icon.png",

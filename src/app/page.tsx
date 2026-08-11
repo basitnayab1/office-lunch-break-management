@@ -10,7 +10,7 @@ async function getOfficeName() {
       !process.env.NEXT_PUBLIC_SUPABASE_URL ||
       !process.env.SUPABASE_SERVICE_ROLE_KEY
     ) {
-      return "Lunch Break";
+      return "Bite Station";
     }
     const supabase = createServiceClient();
     const { data } = await supabase
@@ -18,9 +18,9 @@ async function getOfficeName() {
       .select("office_name")
       .eq("id", 1)
       .maybeSingle();
-    return data?.office_name ?? "Lunch Break";
+    return data?.office_name ?? "Bite Station";
   } catch {
-    return "Lunch Break";
+    return "Bite Station";
   }
 }
 

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { DashboardPreview } from "@/components/auth/dashboard-preview";
-import { LunchBreakMark } from "@/components/brand/lunch-break-mark";
+import { BiteStationBrand } from "@/components/brand/bite-station-logo";
 
 export function LoginHero() {
   return (
@@ -9,7 +9,7 @@ export function LoginHero() {
       <section className="relative hidden h-56 overflow-hidden md:block lg:hidden">
         <Image
           src="/branding/lunch-break-room.png"
-          alt="Lunch Break office lounge"
+          alt="Bite Station lounge"
           fill
           priority
           className="object-cover object-[center_35%]"
@@ -18,15 +18,7 @@ export function LoginHero() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/55 to-black/25" />
         <div className="absolute inset-0 flex items-end justify-between p-6">
           <div className="text-white">
-            <div className="flex items-center gap-3">
-              <LunchBreakMark size={28} className="text-white" />
-              <div>
-                <p className="text-lg font-semibold tracking-wide">LUNCH BREAK</p>
-                <p className="text-xs uppercase tracking-[0.18em] text-white/75">
-                  Eat · Relax · Recharge
-                </p>
-              </div>
-            </div>
+            <BiteStationBrand logoSize={52} showTagline inverted priority />
           </div>
           <div className="flex items-end gap-3">
             <div className="w-24 overflow-hidden rounded-xl border-2 border-black/80 bg-black shadow-xl">
@@ -47,7 +39,7 @@ export function LoginHero() {
       <section className="relative hidden h-full min-h-screen overflow-hidden lg:block">
         <Image
           src="/branding/lunch-break-room.png"
-          alt="Lunch Break office lounge — Eat, Relax, Recharge"
+          alt="Bite Station — Eat, Relax, Recharge"
           fill
           priority
           className="object-cover object-center"
@@ -56,16 +48,8 @@ export function LoginHero() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-black/10" />
 
         <div className="absolute inset-0 flex flex-col justify-between p-8 xl:p-10">
-          <div className="animate-rise flex items-center gap-3 text-white">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
-              <LunchBreakMark size={28} className="text-white" />
-            </span>
-            <div>
-              <p className="text-lg font-semibold tracking-wide">LUNCH BREAK</p>
-              <p className="text-xs uppercase tracking-[0.2em] text-white/75">
-                Eat · Relax · Recharge
-              </p>
-            </div>
+          <div className="animate-rise">
+            <BiteStationBrand logoSize={64} showTagline inverted priority />
           </div>
 
           <div className="relative mx-auto w-full max-w-3xl pb-6 pt-10">

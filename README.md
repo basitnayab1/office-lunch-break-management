@@ -1,6 +1,6 @@
-# Office Lunch Break Management System
+# Bite Station
 
-Production-ready Next.js application for tracking employee lunch/break times, with Supabase (database + auth + RLS) and automatic Google Sheets synchronization.
+Office lunch/break tracking application (**Bite Station**) built with Next.js, Supabase, and Google Sheets.
 
 ## Features
 
@@ -257,11 +257,12 @@ scripts/seed.ts      # Demo users
 
 ## Progressive Web App (PWA)
 
-The app is installable as **Office Break Management** (short name: **Break Management**).
+The app is installable as **Bite Station** (short name: **Bite Station**).
 
 - Manifest: `src/app/manifest.ts`
+- Logo: `public/bite-station-logo.png`
 - Service worker: `public/sw.js` (static shell only — never caches auth, PINs, Supabase data, or Sheets data)
-- Install UI: floating **Install App** button when the browser supports it; iOS shows Share → Add to Home Screen help
+- Install UI: floating **Install Bite Station** button when the browser supports it; iOS shows Share → Add to Home Screen help
 
 Use HTTPS (or localhost) to install. After install, the app opens in standalone mode.
 

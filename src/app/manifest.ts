@@ -2,15 +2,15 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Office Break Management",
-    short_name: "Break Management",
+    name: "Bite Station",
+    short_name: "Bite Station",
     description:
-      "Track and manage employee lunch breaks with timed alarms and office reporting.",
+      "Bite Station — track and manage employee lunch breaks with timed alarms and office reporting.",
     start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait-primary",
-    background_color: "#f3f0e8",
+    background_color: "#000000",
     theme_color: "#0f6a5a",
     lang: "en",
     categories: ["business", "productivity"],

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { logout } from "@/actions/auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { LunchBreakMark } from "@/components/brand/lunch-break-mark";
+import { BiteStationBrand } from "@/components/brand/bite-station-logo";
 
 const links = [
   { href: "/admin", label: "Dashboard", exact: true },
@@ -45,17 +45,8 @@ export function AdminShell({
       >
         <div className="sticky top-0 flex h-full max-h-screen flex-col px-4 py-5">
           <div className="px-2 pb-6">
-            <div className="flex items-center gap-2.5 text-[var(--brand)]">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-soft)]">
-                <LunchBreakMark size={22} />
-              </span>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em]">
-                  Lunch Break
-                </p>
-                <p className="text-[11px] text-[var(--ink-muted)]">Admin Panel</p>
-              </div>
-            </div>
+            <BiteStationBrand logoSize={44} />
+            <p className="mt-2 text-[11px] text-[var(--ink-muted)]">Admin Panel</p>
             <h1 className="mt-4 font-[family-name:var(--font-display)] text-2xl font-semibold leading-tight">
               {officeName}
             </h1>
@@ -98,16 +89,9 @@ export function AdminShell({
 
       <div className="min-w-0">
         <header className="flex items-center justify-between border-b border-[var(--line)] bg-[rgba(255,253,248,0.9)] px-4 py-3 backdrop-blur lg:hidden">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-soft)] text-[var(--brand)]">
-              <LunchBreakMark size={18} />
-            </span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">
-                Lunch Break
-              </p>
-              <p className="font-medium">{officeName}</p>
-            </div>
+          <div className="min-w-0">
+            <BiteStationBrand logoSize={36} />
+            <p className="mt-1 truncate text-sm font-medium">{officeName}</p>
           </div>
           <Button
             variant="secondary"

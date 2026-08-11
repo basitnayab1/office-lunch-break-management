@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { adminLogin } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
-import { LunchBreakMark } from "@/components/brand/lunch-break-mark";
+import { BiteStationLogo } from "@/components/brand/bite-station-logo";
 
 export function AdminLoginForm({ officeName }: { officeName: string }) {
   const router = useRouter();
@@ -32,15 +32,16 @@ export function AdminLoginForm({ officeName }: { officeName: string }) {
   return (
     <div className="animate-rise mx-auto w-full max-w-[420px]">
       <div className="mb-8">
-        <div className="flex items-center gap-3 text-[var(--brand)]">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--brand-soft)]">
-            <LunchBreakMark size={30} />
-          </span>
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em]">
-              Lunch Break
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          <BiteStationLogo size={72} priority className="shrink-0 drop-shadow-sm" />
+          <div className="min-w-0">
+            <p className="text-lg font-semibold tracking-wide text-[var(--brand)]">
+              Bite Station
             </p>
-            <p className="text-xs text-[var(--ink-muted)]">{officeName}</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+              Admin Panel
+            </p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">{officeName}</p>
           </div>
         </div>
 

@@ -14,8 +14,8 @@ export function DashboardPreview({
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-semibold uppercase tracking-[0.14em] text-[var(--brand)]">
-            Lunch Break
+          <p className="font-semibold tracking-wide text-[var(--brand)]">
+            Bite Station
           </p>
           <p
             className={`mt-0.5 font-[family-name:var(--font-display)] font-semibold ${

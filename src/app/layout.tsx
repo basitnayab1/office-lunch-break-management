@@ -22,24 +22,25 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  applicationName: "Office Break Management",
+  applicationName: "Bite Station",
   title: {
-    default: "Office Break Management",
-    template: "%s · Office Break Management",
+    default: "Bite Station",
+    template: "%s · Bite Station",
   },
   description:
-    "Track and manage employee lunch breaks with timed alarms and office reporting.",
+    "Bite Station — track and manage employee lunch breaks with timed alarms and office reporting.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Break Management",
+    title: "Bite Station",
   },
   formatDetection: {
     telephone: false,
   },
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],

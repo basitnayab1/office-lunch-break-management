@@ -1,5 +1,17 @@
+import nextDynamic from "next/dynamic";
 import { listEmployees } from "@/actions/employees";
-import { EmployeeManager } from "@/components/admin/employee-manager";
+
+const EmployeeManager = nextDynamic(
+  () =>
+    import("@/components/admin/employee-manager").then((m) => ({
+      default: m.EmployeeManager,
+    })),
+  {
+    loading: () => (
+      <div className="h-96 animate-pulse rounded-2xl border border-[var(--line)] bg-white/60" />
+    ),
+  }
+);
 
 export const dynamic = "force-dynamic";
 

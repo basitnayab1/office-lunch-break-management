@@ -1,9 +1,10 @@
 "use server";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { requireAdmin, type ActionResult } from "@/actions/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import type { OfficeSettings } from "@/types/database";
 import { DEFAULT_TIMEZONE } from "@/lib/time/timezone";
 
@@ -37,16 +38,19 @@ function normalizeSettings(row: Partial<OfficeSettings> | null): OfficeSettings 
   };
 }
 
-export async function getOfficeSettings(): Promise<OfficeSettings> {
+/** Dedupes settings reads within a single server render/request. */
+export const getOfficeSettings = cache(async (): Promise<OfficeSettings> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("office_settings")
-    .select("*")
+    .select(
+      "id, office_name, timezone, default_break_minutes, break_warning_minutes, break_test_mode, break_test_minutes, google_sheet_id, google_sheet_name, created_at, updated_at"
+    )
     .eq("id", 1)
     .maybeSingle();
 
   return normalizeSettings(data as Partial<OfficeSettings> | null);
-}
+});
 
 export async function updateOfficeSettings(input: {
   office_name: string;
@@ -147,6 +151,9 @@ export async function updateOfficeSettings(input: {
     revalidatePath("/admin/settings");
     revalidatePath("/admin/sheets");
     revalidatePath("/dashboard");
+    revalidatePath("/");
+    revalidatePath("/admin/login");
+    revalidateTag("office-settings");
     return {
       success: true,
       data: normalizeSettings(data),

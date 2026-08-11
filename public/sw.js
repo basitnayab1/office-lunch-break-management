@@ -8,13 +8,13 @@
  * - Requests with Authorization / Cookie credentials beyond navigation
  */
 
-const VERSION = "bite-station-pwa-v1";
+const VERSION = "bite-station-pwa-v2";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 
 const PRECACHE_URLS = [
   "/offline.html",
-  "/bite-station-logo.png",
+  "/bite-station-logo-display.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/apple-touch-icon.png",

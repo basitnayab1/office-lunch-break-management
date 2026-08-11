@@ -1,24 +1,29 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Source_Sans_3, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "sonner";
-import { PwaRegister } from "@/components/pwa/pwa-register";
-import { PwaInstallHost } from "@/components/pwa/pwa-install-button";
+import { DeferredPwa } from "@/components/pwa/deferred-pwa";
 import "./globals.css";
 
 const display = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
+  display: "swap",
+  preload: true,
 });
 
 const body = Source_Sans_3({
   subsets: ["latin"],
   variable: "--font-body",
+  display: "swap",
+  preload: true,
 });
 
 const mono = IBM_Plex_Mono({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["500", "600"],
   variable: "--font-mono",
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -65,8 +70,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${display.variable} ${body.variable} ${mono.variable} antialiased`}>
         {children}
-        <PwaRegister />
-        <PwaInstallHost />
+        <DeferredPwa />
         <Toaster richColors position="top-center" />
       </body>
     </html>

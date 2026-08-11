@@ -1,7 +1,19 @@
+import nextDynamic from "next/dynamic";
 import { getActiveBreaks, getTodayStats } from "@/actions/reports";
 import { getOfficeSettings } from "@/actions/settings";
-import { ActiveBreaksTable } from "@/components/admin/active-breaks-table";
 import { StatCard } from "@/components/ui/card";
+
+const ActiveBreaksTable = nextDynamic(
+  () =>
+    import("@/components/admin/active-breaks-table").then((m) => ({
+      default: m.ActiveBreaksTable,
+    })),
+  {
+    loading: () => (
+      <div className="h-64 animate-pulse rounded-2xl border border-[var(--line)] bg-white/60" />
+    ),
+  }
+);
 
 export const dynamic = "force-dynamic";
 

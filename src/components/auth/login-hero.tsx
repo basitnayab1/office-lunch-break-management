@@ -11,14 +11,13 @@ export function LoginHero() {
           src="/branding/lunch-break-room.png"
           alt="Bite Station lounge"
           fill
-          priority
           className="object-cover object-[center_35%]"
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/55 to-black/25" />
         <div className="absolute inset-0 flex items-end justify-between p-6">
           <div className="text-white">
-            <BiteStationBrand logoSize={52} showTagline inverted priority />
+            <BiteStationBrand logoSize={52} showTagline inverted />
           </div>
           <div className="flex items-end gap-3">
             <div className="w-24 overflow-hidden rounded-xl border-2 border-black/80 bg-black shadow-xl">
@@ -49,7 +48,7 @@ export function LoginHero() {
 
         <div className="absolute inset-0 flex flex-col justify-between p-8 xl:p-10">
           <div className="animate-rise">
-            <BiteStationBrand logoSize={64} showTagline inverted priority />
+            <BiteStationBrand logoSize={64} showTagline inverted />
           </div>
 
           <div className="relative mx-auto w-full max-w-3xl pb-6 pt-10">

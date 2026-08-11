@@ -1,31 +1,40 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
+/** Intrinsic pixel size of public/bite-station-logo-display.png */
+const LOGO_WIDTH = 480;
+const LOGO_HEIGHT = 320;
+
 type BiteStationLogoProps = {
   className?: string;
-  /** Rendered width/height in CSS pixels (keeps original square proportions). */
+  /** Rendered height in CSS pixels (width follows original aspect ratio). */
   size?: number;
   priority?: boolean;
 };
 
 /**
- * Official Bite Station logo (uploaded asset — do not redesign).
+ * Official Bite Station logo (uploaded PNG).
+ * Uses next/image optimization in production; keeps original proportions.
  */
 export function BiteStationLogo({
   className,
   size = 48,
   priority = false,
 }: BiteStationLogoProps) {
+  const height = size;
+  const width = Math.round((size * LOGO_WIDTH) / LOGO_HEIGHT);
+
   return (
     <Image
-      src="/bite-station-logo.png"
+      src="/bite-station-logo-display.png"
       alt="Bite Station"
-      width={size}
-      height={size}
+      width={width}
+      height={height}
       priority={priority}
-      unoptimized
+      loading={priority ? undefined : "lazy"}
       className={cn("shrink-0 object-contain", className)}
-      style={{ width: size, height: size }}
+      style={{ width, height }}
+      sizes={`${width}px`}
     />
   );
 }

@@ -1,33 +1,28 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { loginWithPin, listEmployeesForLogin } from "@/actions/auth";
+import { loginWithPin } from "@/actions/auth";
 import type { EmployeeLoginOption } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/field";
 import { BiteStationLogo } from "@/components/brand/bite-station-logo";
 
-export function LoginForm({ officeName }: { officeName: string }) {
+export function LoginForm({
+  officeName,
+  initialEmployees = [],
+}: {
+  officeName: string;
+  initialEmployees?: EmployeeLoginOption[];
+}) {
   const router = useRouter();
-  const [employees, setEmployees] = useState<EmployeeLoginOption[]>([]);
+  const [employees] = useState<EmployeeLoginOption[]>(initialEmployees);
   const [employeeId, setEmployeeId] = useState("");
   const [pin, setPin] = useState("");
-  const [loadingList, setLoadingList] = useState(true);
   const [pending, startTransition] = useTransition();
-
-  useEffect(() => {
-    listEmployeesForLogin().then((res) => {
-      if (res.success && res.data) {
-        setEmployees(res.data);
-      } else {
-        toast.error(res.success ? "No employees found." : res.error);
-      }
-      setLoadingList(false);
-    });
-  }, []);
+  const listReady = employees.length > 0;
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,12 +70,12 @@ export function LoginForm({ officeName }: { officeName: string }) {
             id="employee"
             value={employeeId}
             onChange={(e) => setEmployeeId(e.target.value)}
-            disabled={loadingList || pending}
+            disabled={pending || !listReady}
             required
             className="h-12"
           >
             <option value="">
-              {loadingList ? "Loading..." : "Select employee"}
+              {listReady ? "Select employee" : "No employees available"}
             </option>
             {employees.map((emp) => (
               <option key={emp.id} value={emp.id}>

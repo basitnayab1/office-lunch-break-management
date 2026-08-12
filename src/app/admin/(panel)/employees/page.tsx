@@ -15,7 +15,13 @@ const EmployeeManager = nextDynamic(
 
 export const dynamic = "force-dynamic";
 
-export default async function EmployeesPage() {
+export default async function EmployeesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ q?: string }>;
+}) {
+  const params = await searchParams;
+  const initialSearch = params?.q?.trim() ?? "";
   const employees = await listEmployees();
 
   return (
@@ -29,7 +35,7 @@ export default async function EmployeesPage() {
           employees appear immediately on the employee login dropdown.
         </p>
       </div>
-      <EmployeeManager employees={employees} />
+      <EmployeeManager employees={employees} initialSearch={initialSearch} />
     </div>
   );
 }

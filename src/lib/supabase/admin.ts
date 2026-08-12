@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
 
 /**
  * Service-role client for admin operations (seed, Google Sheets sync updates).
@@ -13,7 +12,7 @@ export function createServiceClient() {
     throw new Error("Missing Supabase service role configuration");
   }
 
-  return createClient<Database>(url, key, {
+  return createClient(url, key, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

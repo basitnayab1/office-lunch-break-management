@@ -1,4 +1,5 @@
 import { BREAK_TYPE_OPTIONS } from "@/lib/breaks/types";
+import { BiteStationLogo } from "@/components/brand/bite-station-logo";
 
 /** Compact dashboard preview for device mockups on the login hero. */
 export function DashboardPreview({
@@ -14,9 +15,7 @@ export function DashboardPreview({
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-semibold tracking-wide text-[var(--brand)]">
-            Bite Station
-          </p>
+          <BiteStationLogo size={compact ? 14 : 20} />
           <p
             className={`mt-0.5 font-[family-name:var(--font-display)] font-semibold ${
               compact ? "text-[8px]" : "text-[11px]"

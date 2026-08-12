@@ -9,6 +9,7 @@ import { toCsv } from "@/lib/utils";
 import type {
   BreakSession,
   BreakType,
+  DashboardAnalytics,
   DailyReport,
   MonthlyReportRow,
   TodayStats,
@@ -19,6 +20,65 @@ function emptyTypeStats(): DailyReport["byBreakType"] {
     breakfast: { count: 0, totalMinutes: 0, overtimeMinutes: 0 },
     coffee: { count: 0, totalMinutes: 0, overtimeMinutes: 0 },
     lunch: { count: 0, totalMinutes: 0, overtimeMinutes: 0 },
+  };
+}
+
+function addDaysToDateString(date: string, days: number) {
+  const value = new Date(`${date}T00:00:00`);
+  value.setDate(value.getDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+function shortDateLabel(date: string) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "numeric",
+    day: "numeric",
+  });
+}
+
+type DashboardRange = DashboardAnalytics["range"];
+
+function dashboardRangeMeta(range: DashboardRange, today: string) {
+  if (range === "today") {
+    return {
+      start: today,
+      end: today,
+      title: "Today",
+      days: 1,
+    };
+  }
+  if (range === "this_month") {
+    const start = `${today.slice(0, 7)}-01`;
+    const days =
+      Math.floor(
+        (new Date(`${today}T00:00:00`).getTime() -
+          new Date(`${start}T00:00:00`).getTime()) /
+          86_400_000
+      ) + 1;
+    return {
+      start,
+      end: today,
+      title: "This Month",
+      days,
+    };
+  }
+  if (range === "this_week") {
+    const date = new Date(`${today}T00:00:00`);
+    const mondayOffset = (date.getDay() + 6) % 7;
+    const start = addDaysToDateString(today, -mondayOffset);
+    return {
+      start,
+      end: today,
+      title: "This Week",
+      days: mondayOffset + 1,
+    };
+  }
+  return {
+    start: addDaysToDateString(today, -6),
+    end: today,
+    title: "Last 7 Days",
+    days: 7,
   };
 }
 
@@ -67,7 +127,7 @@ export async function getTodayStats(): Promise<TodayStats> {
   const completedBreaks = completed.length;
   const employeesOverTime = new Set(
     completed
-      .filter((b) => b.status === "exceeded")
+      .filter((b) => b.status === "exceeded" || b.status === "overtime")
       .map((b) => b.employee_id)
   ).size;
   const totalExtraMinutes = completed.reduce(
@@ -101,6 +161,69 @@ export async function getActiveBreaks(): Promise<BreakSession[]> {
     .order("started_at", { ascending: true });
 
   return (data ?? []) as BreakSession[];
+}
+
+export async function getDashboardAnalytics(
+  range: DashboardRange = "this_week"
+): Promise<DashboardAnalytics> {
+  try {
+    await requireAdmin();
+  } catch {
+    return {
+      range,
+      title: "This Week",
+      weekActivity: [],
+      breakTypeDistribution: { breakfast: 0, coffee: 0, lunch: 0 },
+      todayByBreakType: { breakfast: 0, coffee: 0, lunch: 0 },
+      weeklyTotalBreaks: 0,
+    };
+  }
+
+  const settings = await getOfficeSettings();
+  const today = todayInTimezone(settings.timezone);
+  const meta = dashboardRangeMeta(range, today);
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("break_sessions")
+    .select("*")
+    .gte("break_date", meta.start)
+    .lte("break_date", meta.end)
+    .neq("status", "active");
+
+  const rows = (data ?? []) as BreakSession[];
+  const dates = Array.from({ length: meta.days }, (_, index) =>
+    addDaysToDateString(meta.start, index)
+  );
+  const distribution: Record<BreakType, number> = {
+    breakfast: 0,
+    coffee: 0,
+    lunch: 0,
+  };
+  const todayByBreakType: Record<BreakType, number> = {
+    breakfast: 0,
+    coffee: 0,
+    lunch: 0,
+  };
+
+  for (const row of rows) {
+    distribution[row.break_type] += 1;
+    if (row.break_date === today) {
+      todayByBreakType[row.break_type] += 1;
+    }
+  }
+
+  return {
+    range,
+    title: meta.title,
+    weekActivity: dates.map((date) => ({
+      date,
+      label: shortDateLabel(date),
+      completedBreaks: rows.filter((row) => row.break_date === date).length,
+    })),
+    breakTypeDistribution: distribution,
+    todayByBreakType,
+    weeklyTotalBreaks: rows.length,
+  };
 }
 
 export async function getBreakHistory(filters: {
@@ -138,7 +261,7 @@ export async function getBreakHistory(filters: {
     query = query.eq("status", filters.status);
   }
   if (filters.exceededOnly) {
-    query = query.eq("status", "exceeded");
+      query = query.in("status", ["exceeded", "overtime"]);
   }
 
   const { data } = await query;
@@ -270,7 +393,7 @@ export async function getMonthlyReport(
     row.breakCount += 1;
     row.totalBreakMinutes += Number(b.actual_minutes) || 0;
     row.totalOvertimeMinutes += Number(b.extra_minutes) || 0;
-    if (b.status === "exceeded") row.exceededCount += 1;
+    if (b.status === "exceeded" || b.status === "overtime") row.exceededCount += 1;
     if (b.break_type === "breakfast") {
       row.breakfastCount += 1;
       row.breakfastMinutes += Number(b.actual_minutes) || 0;
@@ -372,4 +495,138 @@ export async function exportMonthlyReportCsv(
       "Average Break Minutes": r.averageBreakMinutes,
     }))
   );
+}
+
+export async function exportAdvancedAnalyticsCsv(input: {
+  startDate: string;
+  endDate: string;
+}): Promise<string> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("break_sessions")
+    .select("*, employee:employees(*)")
+    .gte("break_date", input.startDate)
+    .lte("break_date", input.endDate)
+    .neq("status", "active")
+    .order("started_at", { ascending: true });
+
+  const breaks = (data ?? []) as BreakSession[];
+  const departmentMap = new Map<
+    string,
+    {
+      breaks: number;
+      totalMinutes: number;
+      overtimeMinutes: number;
+      overtimeCount: number;
+    }
+  >();
+  const employeeMap = new Map<
+    string,
+    {
+      employeeId: string;
+      employee: string;
+      department: string;
+      breaks: number;
+      overtimeCount: number;
+      overtimeMinutes: number;
+      onTimeCount: number;
+    }
+  >();
+  const hourMap = new Map<number, number>();
+
+  for (const item of breaks) {
+    const department = item.employee?.department ?? "Unassigned";
+    const dept = departmentMap.get(department) ?? {
+      breaks: 0,
+      totalMinutes: 0,
+      overtimeMinutes: 0,
+      overtimeCount: 0,
+    };
+    dept.breaks += 1;
+    dept.totalMinutes += Number(item.actual_minutes) || 0;
+    dept.overtimeMinutes += Number(item.extra_minutes) || 0;
+    if ((Number(item.extra_minutes) || 0) > 0) dept.overtimeCount += 1;
+    departmentMap.set(department, dept);
+
+    if (item.employee) {
+      const employee = employeeMap.get(item.employee_id) ?? {
+        employeeId: item.employee.employee_id,
+        employee: item.employee.full_name,
+        department,
+        breaks: 0,
+        overtimeCount: 0,
+        overtimeMinutes: 0,
+        onTimeCount: 0,
+      };
+      employee.breaks += 1;
+      employee.overtimeMinutes += Number(item.extra_minutes) || 0;
+      if ((Number(item.extra_minutes) || 0) > 0) {
+        employee.overtimeCount += 1;
+      } else {
+        employee.onTimeCount += 1;
+      }
+      employeeMap.set(item.employee_id, employee);
+    }
+
+    const hour = new Date(item.started_at).getHours();
+    hourMap.set(hour, (hourMap.get(hour) ?? 0) + 1);
+  }
+
+  const totalBreaks = breaks.length || 1;
+  const rows = [
+    {
+      Section: "Summary",
+      Metric: "Total breaks",
+      Name: "",
+      Department: "",
+      Value: breaks.length,
+      Extra: "",
+    },
+    {
+      Section: "Summary",
+      Metric: "Overtime percentage",
+      Name: "",
+      Department: "",
+      Value:
+        Math.round(
+          (breaks.filter((b) => (Number(b.extra_minutes) || 0) > 0).length /
+            totalBreaks) *
+            10000
+        ) / 100,
+      Extra: "%",
+    },
+    ...Array.from(departmentMap.entries()).map(([department, value]) => ({
+      Section: "Department",
+      Metric: "Comparison",
+      Name: department,
+      Department: department,
+      Value: value.breaks,
+      Extra: `avg=${Math.round((value.totalMinutes / value.breaks) * 100) / 100}; overtime=${Math.round(value.overtimeMinutes * 100) / 100}`,
+    })),
+    ...Array.from(hourMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([hour, count]) => ({
+        Section: "Peak Hours",
+        Metric: "Break starts",
+        Name: `${String(hour).padStart(2, "0")}:00`,
+        Department: "",
+        Value: count,
+        Extra: "",
+      })),
+    ...Array.from(employeeMap.values())
+      .sort((a, b) => b.overtimeMinutes - a.overtimeMinutes)
+      .map((employee) => ({
+        Section: "Employee",
+        Metric: "Punctuality",
+        Name: employee.employee,
+        Department: employee.department,
+        Value:
+          Math.round((employee.onTimeCount / Math.max(1, employee.breaks)) * 10000) /
+          100,
+        Extra: `employee_id=${employee.employeeId}; breaks=${employee.breaks}; overtime_count=${employee.overtimeCount}; overtime_minutes=${Math.round(employee.overtimeMinutes * 100) / 100}`,
+      })),
+  ];
+
+  return toCsv(rows);
 }

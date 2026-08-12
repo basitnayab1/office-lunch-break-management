@@ -4,6 +4,7 @@ import {
   requireAdminSession,
 } from "@/lib/auth/guards";
 import { getOfficeSettings } from "@/actions/settings";
+import { getMyNotifications } from "@/actions/notifications";
 import { AdminShell } from "@/components/admin/admin-shell";
 
 export const dynamic = "force-dynamic";
@@ -29,10 +30,19 @@ export default async function AdminPanelLayout({
     redirect("/admin/login");
   }
 
-  const settings = await getOfficeSettings();
+  const [settings, notifications] = await Promise.all([
+    getOfficeSettings(),
+    getMyNotifications(50),
+  ]);
 
   return (
-    <AdminShell officeName={settings.office_name} adminName={admin.full_name}>
+    <AdminShell
+      officeName={settings.office_name}
+      adminName={admin.full_name}
+      adminProfileImageUrl={admin.profile_image_url}
+      timezone={settings.timezone}
+      initialNotifications={notifications}
+    >
       {children}
     </AdminShell>
   );

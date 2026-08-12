@@ -35,7 +35,7 @@ assert(breakfastOver.isOvertime, "breakfast overtime");
 assert(breakfastOver.extraSeconds === 5 * 60, "breakfast extra");
 
 const finalized = finalizeBreak(start, endOver, 60);
-assert(finalized.status === "exceeded", "status exceeded");
+assert(finalized.status === "overtime", "status overtime");
 assert(finalized.extra_minutes === 8.5, `extra minutes ${finalized.extra_minutes}`);
 
 console.log("calculation tests passed");

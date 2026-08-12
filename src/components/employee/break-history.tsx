@@ -4,6 +4,19 @@ import { formatOfficeDateTime, formatOfficeTime } from "@/lib/time/timezone";
 import { formatMinutesDisplay } from "@/lib/utils";
 import type { BreakSession } from "@/types/database";
 
+function statusDisplay(status: BreakSession["status"]) {
+  if (status === "overtime" || status === "exceeded") {
+    return { label: "Overtime", tone: "danger" as const };
+  }
+  if (status === "auto_ended") {
+    return { label: "Auto Ended", tone: "warn" as const };
+  }
+  if (status === "cancelled") {
+    return { label: "Cancelled", tone: "neutral" as const };
+  }
+  return { label: "Within Limit", tone: "ok" as const };
+}
+
 export function BreakHistoryList({
   breaks,
   timezone,
@@ -41,36 +54,37 @@ export function BreakHistoryList({
             </tr>
           </thead>
           <tbody>
-            {breaks.map((b) => (
-              <tr key={b.id} className="border-t border-[var(--line)]">
-                <td className="px-4 py-3">{b.break_date}</td>
-                <td className="px-4 py-3">{breakTypeLabel(b.break_type)}</td>
-                <td className="px-4 py-3">
-                  {formatOfficeTime(b.started_at, timezone)}
-                </td>
-                <td className="px-4 py-3">
-                  {b.ended_at ? formatOfficeTime(b.ended_at, timezone) : "—"}
-                </td>
-                <td className="px-4 py-3">{b.allowed_minutes} min</td>
-                <td className="px-4 py-3">
-                  {formatMinutesDisplay(b.actual_minutes)}
-                </td>
-                <td
-                  className={`px-4 py-3 font-semibold ${
-                    (b.extra_minutes ?? 0) > 0 ? "text-[var(--danger)]" : ""
-                  }`}
-                >
-                  {(b.extra_minutes ?? 0) > 0
-                    ? formatMinutesDisplay(b.extra_minutes)
-                    : "0"}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge tone={b.status === "exceeded" ? "danger" : "ok"}>
-                    {b.status === "exceeded" ? "Exceeded" : "Within Limit"}
-                  </Badge>
-                </td>
-              </tr>
-            ))}
+            {breaks.map((b) => {
+              const status = statusDisplay(b.status);
+              return (
+                <tr key={b.id} className="border-t border-[var(--line)]">
+                  <td className="px-4 py-3">{b.break_date}</td>
+                  <td className="px-4 py-3">{breakTypeLabel(b.break_type)}</td>
+                  <td className="px-4 py-3">
+                    {formatOfficeTime(b.started_at, timezone)}
+                  </td>
+                  <td className="px-4 py-3">
+                    {b.ended_at ? formatOfficeTime(b.ended_at, timezone) : "-"}
+                  </td>
+                  <td className="px-4 py-3">{b.allowed_minutes} min</td>
+                  <td className="px-4 py-3">
+                    {formatMinutesDisplay(b.actual_minutes)}
+                  </td>
+                  <td
+                    className={`px-4 py-3 font-semibold ${
+                      (b.extra_minutes ?? 0) > 0 ? "text-[var(--danger)]" : ""
+                    }`}
+                  >
+                    {(b.extra_minutes ?? 0) > 0
+                      ? formatMinutesDisplay(b.extra_minutes)
+                      : "0"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge tone={status.tone}>{status.label}</Badge>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -1,4 +1,4 @@
-/* Bite Station — safe PWA service worker
+/* //:ai safe PWA service worker
  *
  * Caches ONLY static shell assets (icons, offline page, hashed Next static files).
  * NEVER caches:
@@ -8,13 +8,32 @@
  * - Requests with Authorization / Cookie credentials beyond navigation
  */
 
-const VERSION = "bite-station-pwa-v2";
+const VERSION = "bite-station-pwa-v3";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
+const IS_LOCAL_DEV =
+  self.location.hostname === "localhost" ||
+  self.location.hostname === "127.0.0.1";
+
+if (IS_LOCAL_DEV) {
+  self.addEventListener("install", (event) => {
+    event.waitUntil(self.skipWaiting());
+  });
+
+  self.addEventListener("activate", (event) => {
+    event.waitUntil(
+      (async () => {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+        await self.registration.unregister();
+      })()
+    );
+  });
+} else {
 
 const PRECACHE_URLS = [
   "/offline.html",
-  "/bite-station-logo-display.png",
+  "/bite-station-logo-transparent.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/apple-touch-icon.png",
@@ -146,3 +165,4 @@ self.addEventListener("message", (event) => {
     self.skipWaiting();
   }
 });
+}

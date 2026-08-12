@@ -35,24 +35,17 @@ export function LoginForm({
 
       toast.success(result.message ?? "Signed in");
       router.push("/dashboard");
-      router.refresh();
     });
   }
 
   return (
     <div className="animate-rise mx-auto w-full max-w-[420px]">
       <div className="mb-8">
-        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-          <BiteStationLogo size={88} priority className="shrink-0 drop-shadow-sm" />
-          <div className="min-w-0">
-            <p className="text-lg font-semibold tracking-wide text-[var(--brand)]">
-              Bite Station
-            </p>
-            <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">
-              Eat · Relax · Recharge
-            </p>
-            <p className="mt-1 text-xs text-[var(--ink-muted)]">{officeName}</p>
-          </div>
+        <div className="flex flex-col items-start gap-3">
+          <BiteStationLogo size={104} priority className="shrink-0 drop-shadow-sm" />
+          <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+            {officeName}
+          </p>
         </div>
 
         <h1 className="mt-8 font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight text-[var(--ink)]">

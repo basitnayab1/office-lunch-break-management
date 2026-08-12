@@ -10,12 +10,18 @@ import {
 } from "@/lib/breaks/types";
 import { getOfficeDate } from "@/lib/time/timezone";
 import { DEFAULT_TIMEZONE } from "@/lib/time/timezone";
+import { formatOfficeTime } from "@/lib/time/timezone";
 import {
   appendBreakToSheet,
   getGoogleSheetId,
   isGoogleSheetsConfigured,
 } from "@/lib/google-sheets/service";
 import { requireAdmin, requireEmployee, type ActionResult } from "@/actions/auth";
+import {
+  createAdminNotification,
+  createEmployeeNotification,
+} from "@/actions/notifications";
+import { logAudit } from "@/actions/audit";
 import { revalidatePath } from "next/cache";
 import type { BreakSession, OfficeSettings } from "@/types/database";
 
@@ -36,12 +42,146 @@ async function getSettings(): Promise<OfficeSettings> {
       break_warning_minutes: 2,
       break_test_mode: false,
       break_test_minutes: 3,
+      grace_period_minutes: 5,
+      daily_max_breaks: 3,
+      min_work_minutes_before_break: 0,
+      max_simultaneous_breaks: 10,
+      office_start_time: "09:00:00",
+      office_end_time: "18:00:00",
+      allow_weekend_breaks: false,
+      auto_end_breaks: false,
       google_sheet_id: null,
       google_sheet_name: "Break Records",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
   );
+}
+
+function timeToMinutes(value: string) {
+  const [hours = "0", minutes = "0"] = value.split(":");
+  return Number(hours) * 60 + Number(minutes);
+}
+
+function isWithinOfficeWindow(nowIso: string, settings: OfficeSettings) {
+  const weekday = formatOfficeTime(nowIso, settings.timezone, "i");
+  if (!settings.allow_weekend_breaks && (weekday === "6" || weekday === "7")) {
+    return false;
+  }
+
+  const current = timeToMinutes(formatOfficeTime(nowIso, settings.timezone, "HH:mm"));
+  const start = timeToMinutes(settings.office_start_time);
+  const end = timeToMinutes(settings.office_end_time);
+
+  if (start <= end) {
+    return current >= start && current <= end;
+  }
+  return current >= start || current <= end;
+}
+
+async function validateBreakStartRules({
+  employee,
+  settings,
+  startedAt,
+  breakDate,
+}: {
+  employee: Awaited<ReturnType<typeof requireEmployee>>;
+  settings: OfficeSettings;
+  startedAt: string;
+  breakDate: string;
+}): Promise<string | null> {
+  const service = createServiceClient();
+  const blockedUntil = employee.break_access_blocked_until
+    ? new Date(employee.break_access_blocked_until).getTime()
+    : 0;
+
+  if (!employee.is_active || blockedUntil > Date.now()) {
+    return employee.break_access_block_reason || "Your break access is temporarily blocked.";
+  }
+
+  if (!isWithinOfficeWindow(startedAt, settings)) {
+    return `Breaks are allowed during office hours (${settings.office_start_time.slice(0, 5)}-${settings.office_end_time.slice(0, 5)}).`;
+  }
+
+  const { data: rpcRows } = await service.rpc("validate_break_start", {
+    p_employee_id: employee.id,
+    p_break_date: breakDate,
+    p_now: startedAt,
+  });
+  const rpcResult = Array.isArray(rpcRows) ? rpcRows[0] : null;
+  if (rpcResult && !rpcResult.ok) {
+    return rpcResult.message || "Break cannot be started right now.";
+  }
+
+  const [{ count: todayCount }, { count: activeCount }, { data: activeRows }, { data: rule }] =
+    await Promise.all([
+      service
+        .from("break_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("employee_id", employee.id)
+        .eq("break_date", breakDate)
+        .neq("status", "cancelled"),
+      service
+        .from("break_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "active"),
+      service
+        .from("break_sessions")
+        .select("id, employee:employees(department)")
+        .eq("status", "active"),
+      service
+        .from("coverage_rules")
+        .select("*")
+        .eq("department", employee.department)
+        .eq("is_active", true)
+        .maybeSingle(),
+    ]);
+
+  if ((todayCount ?? 0) >= settings.daily_max_breaks) {
+    return `Daily break limit reached (${settings.daily_max_breaks}).`;
+  }
+
+  if ((activeCount ?? 0) >= settings.max_simultaneous_breaks) {
+    return "Office break capacity is full right now. Please try again shortly.";
+  }
+
+  const departmentActiveBreaks = (activeRows ?? []).filter((row) => {
+    const related = row.employee as { department?: string } | { department?: string }[] | null;
+    const relatedDepartment = Array.isArray(related)
+      ? related[0]?.department
+      : related?.department;
+    return relatedDepartment === employee.department;
+  }).length;
+
+  const coverageRule = rule as {
+    minimum_available?: number;
+    max_on_break?: number | null;
+  } | null;
+
+  if (
+    coverageRule?.max_on_break != null &&
+    departmentActiveBreaks >= coverageRule.max_on_break
+  ) {
+    return `${employee.department} already has ${departmentActiveBreaks} employee(s) on break. Please try again later.`;
+  }
+
+  if (coverageRule?.minimum_available != null) {
+    const { count: departmentEmployees } = await service
+      .from("employees")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "employee")
+      .eq("is_active", true)
+      .eq("department", employee.department);
+
+    const availableAfterStart =
+      (departmentEmployees ?? 0) - departmentActiveBreaks - 1;
+
+    if (availableAfterStart < coverageRule.minimum_available) {
+      return `Your team currently requires at least ${coverageRule.minimum_available} active employee(s). Please try again in a few minutes.`;
+    }
+  }
+
+  return null;
 }
 
 export async function getActiveBreak(): Promise<BreakSession | null> {
@@ -64,15 +204,13 @@ export async function getMyBreakHistory(limit = 30): Promise<BreakSession[]> {
 
   const { data } = await supabase
     .from("break_sessions")
-    .select(
-      "id, employee_id, break_date, break_type, started_at, ended_at, allowed_minutes, actual_minutes, actual_seconds, extra_minutes, extra_seconds, status, synced_to_sheet, sheet_sync_status, created_at, updated_at"
-    )
+    .select("*")
     .eq("employee_id", employee.id)
     .neq("status", "active")
     .order("started_at", { ascending: false })
     .limit(limit);
 
-  return data ?? [];
+  return (data ?? []) as BreakSession[];
 }
 
 export async function startBreak(
@@ -110,9 +248,18 @@ export async function startBreak(
       return { success: false, error: "Your break has already started." };
     }
 
-    // Server/runtime timestamp — never use the browser clock for start/end.
     const startedAt = new Date().toISOString();
     const breakDate = getOfficeDate(startedAt, settings.timezone);
+    const rulesError = await validateBreakStartRules({
+      employee,
+      settings,
+      startedAt,
+      breakDate,
+    });
+
+    if (rulesError) {
+      return { success: false, error: rulesError };
+    }
 
     const { data, error } = await service
       .from("break_sessions")
@@ -125,6 +272,8 @@ export async function startBreak(
         allowed_minutes: allowedMinutes,
         status: "active",
         google_sheet_sync_status: "not_applicable",
+        google_sheet_sync_attempts: 0,
+        google_sheet_next_retry_at: null,
       })
       .select("*")
       .single();
@@ -137,6 +286,23 @@ export async function startBreak(
       console.error("startBreak error", error);
       return { success: false, error: "Unable to start break. Please try again." };
     }
+
+    await createEmployeeNotification({
+      recipientId: employee.id,
+      kind: "system",
+      title: `${breakTypeLabel(breakType)} break started`,
+      body: `Your break is active for ${allowedMinutes} minutes.`,
+      entityType: "break_session",
+      entityId: data.id,
+    });
+    await logAudit({
+      actorId: employee.id,
+      actorType: employee.role,
+      action: "break_started",
+      targetType: "break_session",
+      targetId: data.id,
+      newData: data as BreakSession,
+    });
 
     revalidatePath("/dashboard");
     revalidatePath("/admin");
@@ -182,9 +348,10 @@ export async function endBreak(): Promise<ActionResult<BreakSession>> {
         actual_seconds: metrics.actual_seconds,
         extra_minutes: metrics.extra_minutes,
         extra_seconds: metrics.extra_seconds,
-        status: metrics.status,
+        status: metrics.extra_seconds > 0 ? "overtime" : "completed",
         google_sheet_sync_status: "pending",
         google_sheet_error: null,
+        google_sheet_next_retry_at: null,
       })
       .eq("id", active.id)
       .eq("status", "active")
@@ -201,6 +368,40 @@ export async function endBreak(): Promise<ActionResult<BreakSession>> {
     // Sync to Google Sheets (non-blocking failure)
     await syncBreakToGoogleSheets(completed.id);
 
+    await createEmployeeNotification({
+      recipientId: employee.id,
+      kind: metrics.extra_seconds > 0 ? "overtime_warning" : "break_completed",
+      title:
+        metrics.extra_seconds > 0
+          ? "Break ended with overtime"
+          : "Break completed",
+      body:
+        metrics.extra_seconds > 0
+          ? `You exceeded by ${metrics.extra_minutes} minutes.`
+          : "You returned within the allowed time.",
+      entityType: "break_session",
+      entityId: completed.id,
+    });
+    await logAudit({
+      actorId: employee.id,
+      actorType: employee.role,
+      action: "break_ended",
+      targetType: "break_session",
+      targetId: completed.id,
+      oldData: active as BreakSession,
+      newData: completed as BreakSession,
+    });
+
+    if (metrics.extra_seconds > 0) {
+      await createAdminNotification({
+        kind: "admin_overtime_alert",
+        title: `${employee.full_name} returned late`,
+        body: `${employee.department} overtime: ${metrics.extra_minutes} minute(s).`,
+        entityType: "break_session",
+        entityId: completed.id,
+      });
+    }
+
     revalidatePath("/dashboard");
     revalidatePath("/admin");
     revalidatePath("/admin/history");
@@ -208,7 +409,7 @@ export async function endBreak(): Promise<ActionResult<BreakSession>> {
       success: true,
       data: completed,
       message:
-        metrics.status === "exceeded"
+        metrics.extra_seconds > 0
           ? `Break ended. You exceeded by ${metrics.extra_minutes} minutes.`
           : "Break ended successfully.",
     };
@@ -238,10 +439,16 @@ export async function syncBreakToGoogleSheets(
     employee_id: string;
     full_name: string;
     department: string;
+    designation?: string;
+    shift?: string;
     email: string | null;
     allowed_break_minutes: number;
     role: "employee" | "admin";
     is_active: boolean;
+    profile_image_url?: string | null;
+    joining_date?: string | null;
+    break_access_blocked_until?: string | null;
+    break_access_block_reason?: string | null;
     created_at: string;
     updated_at: string;
   } | null;
@@ -285,7 +492,15 @@ export async function syncBreakToGoogleSheets(
     const { rowNumber, spreadsheetId, sheetName, updatedRange } =
       await appendBreakToSheet({
         session,
-        employee,
+        employee: {
+          ...employee,
+          designation: employee.designation ?? "",
+          shift: employee.shift ?? "General",
+          profile_image_url: employee.profile_image_url ?? null,
+          joining_date: employee.joining_date ?? null,
+          break_access_blocked_until: employee.break_access_blocked_until ?? null,
+          break_access_block_reason: employee.break_access_block_reason ?? null,
+        },
         settings,
         forceAppend,
       });
@@ -311,6 +526,7 @@ export async function syncBreakToGoogleSheets(
         google_sheet_row_id: rowNumber,
         google_sheet_synced_at: new Date().toISOString(),
         google_sheet_error: null,
+        google_sheet_next_retry_at: null,
       })
       .eq("id", breakSessionId);
 
@@ -326,13 +542,27 @@ export async function syncBreakToGoogleSheets(
       message,
       err
     );
+    const nextAttempts = Number(session.google_sheet_sync_attempts ?? 0) + 1;
+    const retryDelayMinutes = Math.min(60, Math.max(5, nextAttempts * 5));
     await service
       .from("break_sessions")
       .update({
         google_sheet_sync_status: "failed",
         google_sheet_error: message,
+        google_sheet_sync_attempts: nextAttempts,
+        google_sheet_next_retry_at: new Date(
+          Date.now() + retryDelayMinutes * 60_000
+        ).toISOString(),
       })
       .eq("id", breakSessionId);
+
+    await createAdminNotification({
+      kind: "google_sheets_failed",
+      title: "Google Sheets sync failed",
+      body: message,
+      entityType: "break_session",
+      entityId: breakSessionId,
+    });
 
     return {
       success: false,
@@ -383,6 +613,268 @@ export async function retrySingleSheetSync(
   const result = await syncBreakToGoogleSheets(breakSessionId);
   revalidatePath("/admin/history");
   return result;
+}
+
+export async function adminEndEmployeeBreak(
+  breakSessionId: string,
+  reason: string
+): Promise<ActionResult<BreakSession>> {
+  const admin = await requireAdmin();
+  if (!reason.trim()) return { success: false, error: "Reason is required." };
+
+  const service = createServiceClient();
+  const { data: active } = await service
+    .from("break_sessions")
+    .select("*, employee:employees(*)")
+    .eq("id", breakSessionId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!active) return { success: false, error: "Active break not found." };
+
+  const endedAt = new Date().toISOString();
+  const metrics = finalizeBreak(
+    active.started_at,
+    endedAt,
+    active.allowed_minutes
+  );
+  const { data: ended, error } = await service
+    .from("break_sessions")
+    .update({
+      ended_at: endedAt,
+      actual_minutes: metrics.actual_minutes,
+      actual_seconds: metrics.actual_seconds,
+      extra_minutes: metrics.extra_minutes,
+      extra_seconds: metrics.extra_seconds,
+      status: metrics.extra_seconds > 0 ? "overtime" : "completed",
+      google_sheet_sync_status: "pending",
+      google_sheet_error: null,
+      admin_note: reason.trim(),
+    })
+    .eq("id", breakSessionId)
+    .eq("status", "active")
+    .select("*")
+    .maybeSingle();
+
+  if (error || !ended) {
+    return { success: false, error: "Unable to end employee break." };
+  }
+
+  await createEmployeeNotification({
+    recipientId: ended.employee_id,
+    kind: "break_completed",
+    title: "Break ended by admin",
+    body: reason.trim(),
+    entityType: "break_session",
+    entityId: breakSessionId,
+  });
+  await logAudit({
+    actorId: admin.id,
+    actorType: "admin",
+    action: "admin_end_break",
+    targetType: "break_session",
+    targetId: breakSessionId,
+    oldData: active as BreakSession,
+    newData: ended as BreakSession,
+  });
+  await syncBreakToGoogleSheets(breakSessionId);
+  revalidatePath("/admin");
+  revalidatePath("/admin/history");
+  return { success: true, data: ended as BreakSession, message: "Break ended." };
+}
+
+export async function adminExtendBreak(
+  breakSessionId: string,
+  minutes: 5 | 10 | 15,
+  reason: string
+): Promise<ActionResult<BreakSession>> {
+  const admin = await requireAdmin();
+  if (!reason.trim()) return { success: false, error: "Reason is required." };
+
+  const service = createServiceClient();
+  const { data: active } = await service
+    .from("break_sessions")
+    .select("*")
+    .eq("id", breakSessionId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!active) return { success: false, error: "Active break not found." };
+
+  const { data: updated, error } = await service
+    .from("break_sessions")
+    .update({
+      allowed_minutes: Number(active.allowed_minutes) + minutes,
+      admin_note: reason.trim(),
+    })
+    .eq("id", breakSessionId)
+    .eq("status", "active")
+    .select("*")
+    .maybeSingle();
+
+  if (error || !updated) {
+    return { success: false, error: "Unable to extend break." };
+  }
+
+  await createEmployeeNotification({
+    recipientId: updated.employee_id,
+    kind: "system",
+    title: `Break extended by ${minutes} minutes`,
+    body: reason.trim(),
+    entityType: "break_session",
+    entityId: breakSessionId,
+  });
+  await logAudit({
+    actorId: admin.id,
+    actorType: "admin",
+    action: "admin_extend_break",
+    targetType: "break_session",
+    targetId: breakSessionId,
+    oldData: active as BreakSession,
+    newData: updated as BreakSession,
+  });
+  revalidatePath("/admin");
+  return { success: true, data: updated as BreakSession, message: "Break extended." };
+}
+
+export async function adminApproveOvertime(
+  breakSessionId: string,
+  approvedMinutes: number,
+  reason: string
+): Promise<ActionResult<BreakSession>> {
+  const admin = await requireAdmin();
+  if (!reason.trim()) return { success: false, error: "Reason is required." };
+
+  const service = createServiceClient();
+  const { data: existing } = await service
+    .from("break_sessions")
+    .select("*")
+    .eq("id", breakSessionId)
+    .maybeSingle();
+
+  if (!existing) return { success: false, error: "Break record not found." };
+
+  const { data: updated, error } = await service
+    .from("break_sessions")
+    .update({
+      approved_overtime_minutes: Math.max(0, Number(approvedMinutes) || 0),
+      admin_note: reason.trim(),
+    })
+    .eq("id", breakSessionId)
+    .select("*")
+    .maybeSingle();
+
+  if (error || !updated) {
+    return { success: false, error: "Unable to approve overtime." };
+  }
+
+  await logAudit({
+    actorId: admin.id,
+    actorType: "admin",
+    action: "admin_approve_overtime",
+    targetType: "break_session",
+    targetId: breakSessionId,
+    oldData: existing as BreakSession,
+    newData: updated as BreakSession,
+  });
+  revalidatePath("/admin");
+  revalidatePath("/admin/history");
+  return {
+    success: true,
+    data: updated as BreakSession,
+    message: "Overtime approved.",
+  };
+}
+
+export async function adminSendBreakReminder(
+  breakSessionId: string,
+  reason: string
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!reason.trim()) return { success: false, error: "Reason is required." };
+
+  const service = createServiceClient();
+  const { data: active } = await service
+    .from("break_sessions")
+    .select("id, employee_id, status")
+    .eq("id", breakSessionId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!active) return { success: false, error: "Active break not found." };
+
+  await createEmployeeNotification({
+    recipientId: active.employee_id,
+    kind: "system",
+    title: "Admin reminder",
+    body: reason.trim(),
+    entityType: "break_session",
+    entityId: breakSessionId,
+  });
+  await logAudit({
+    actorId: admin.id,
+    actorType: "admin",
+    action: "admin_send_break_reminder",
+    targetType: "break_session",
+    targetId: breakSessionId,
+    newData: { reason: reason.trim() },
+  });
+  return { success: true, message: "Reminder sent." };
+}
+
+export async function adminTemporarilyBlockBreakAccess(
+  employeeId: string,
+  minutes: number,
+  reason: string
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!reason.trim()) return { success: false, error: "Reason is required." };
+
+  const blockMinutes = Math.max(5, Math.min(1440, Number(minutes) || 15));
+  const blockedUntil = new Date(Date.now() + blockMinutes * 60_000).toISOString();
+  const service = createServiceClient();
+  const { data: existing } = await service
+    .from("employees")
+    .select("*")
+    .eq("id", employeeId)
+    .maybeSingle();
+
+  if (!existing) return { success: false, error: "Employee not found." };
+
+  const { data: updated, error } = await service
+    .from("employees")
+    .update({
+      break_access_blocked_until: blockedUntil,
+      break_access_block_reason: reason.trim(),
+    })
+    .eq("id", employeeId)
+    .select("*")
+    .maybeSingle();
+
+  if (error || !updated) {
+    return { success: false, error: "Unable to block break access." };
+  }
+
+  await createEmployeeNotification({
+    recipientId: employeeId,
+    kind: "system",
+    title: "Break access temporarily blocked",
+    body: `${reason.trim()} Until ${blockedUntil}.`,
+    entityType: "employee",
+    entityId: employeeId,
+  });
+  await logAudit({
+    actorId: admin.id,
+    actorType: "admin",
+    action: "admin_block_break_access",
+    targetType: "employee",
+    targetId: employeeId,
+    oldData: existing,
+    newData: updated,
+  });
+  revalidatePath("/admin");
+  revalidatePath("/admin/employees");
+  return { success: true, message: "Break access blocked temporarily." };
 }
 
 export async function getServerNow(): Promise<string> {

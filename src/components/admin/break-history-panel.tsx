@@ -15,6 +15,19 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/field";
 import { Badge, Card } from "@/components/ui/card";
 
+function statusDisplay(status: BreakSession["status"]) {
+  if (status === "overtime" || status === "exceeded") {
+    return { label: "Overtime", tone: "danger" as const };
+  }
+  if (status === "auto_ended") {
+    return { label: "Auto Ended", tone: "warn" as const };
+  }
+  if (status === "cancelled") {
+    return { label: "Cancelled", tone: "neutral" as const };
+  }
+  return { label: "Within Limit", tone: "ok" as const };
+}
+
 export function BreakHistoryPanel({
   initialRows,
   employees,
@@ -113,6 +126,8 @@ export function BreakHistoryPanel({
             <Label>Status</Label>
             <Select value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="">All</option>
+              <option value="completed">Completed</option>
+              <option value="overtime">Overtime</option>
               <option value="within_limit">Within Limit</option>
               <option value="exceeded">Exceeded</option>
             </Select>
@@ -156,38 +171,38 @@ export function BreakHistoryPanel({
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-t border-[var(--line)]">
-                  <td className="px-4 py-3">{r.break_date}</td>
-                  <td className="px-4 py-3 font-medium">
-                    {r.employee?.full_name}
-                  </td>
-                  <td className="px-4 py-3">{breakTypeLabel(r.break_type)}</td>
-                  <td className="px-4 py-3">
-                    {formatOfficeTime(r.started_at, timezone)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {r.ended_at ? formatOfficeTime(r.ended_at, timezone) : "—"}
-                  </td>
-                  <td className="px-4 py-3">{r.allowed_minutes}</td>
-                  <td className="px-4 py-3">
-                    {formatMinutesDisplay(r.actual_minutes)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 font-semibold ${
-                      (r.extra_minutes ?? 0) > 0 ? "text-[var(--danger)]" : ""
-                    }`}
-                  >
-                    {(r.extra_minutes ?? 0) > 0
-                      ? formatMinutesDisplay(r.extra_minutes)
-                      : "0"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge tone={r.status === "exceeded" ? "danger" : "ok"}>
-                      {r.status === "exceeded" ? "Exceeded" : "Within Limit"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
+              {rows.map((r) => {
+                const statusInfo = statusDisplay(r.status);
+                return (
+                  <tr key={r.id} className="border-t border-[var(--line)]">
+                    <td className="px-4 py-3">{r.break_date}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {r.employee?.full_name}
+                    </td>
+                    <td className="px-4 py-3">{breakTypeLabel(r.break_type)}</td>
+                    <td className="px-4 py-3">
+                      {formatOfficeTime(r.started_at, timezone)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.ended_at ? formatOfficeTime(r.ended_at, timezone) : "-"}
+                    </td>
+                    <td className="px-4 py-3">{r.allowed_minutes}</td>
+                    <td className="px-4 py-3">
+                      {formatMinutesDisplay(r.actual_minutes)}
+                    </td>
+                    <td
+                      className={`px-4 py-3 font-semibold ${
+                        (r.extra_minutes ?? 0) > 0 ? "text-[var(--danger)]" : ""
+                      }`}
+                    >
+                      {(r.extra_minutes ?? 0) > 0
+                        ? formatMinutesDisplay(r.extra_minutes)
+                        : "0"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={statusInfo.tone}>{statusInfo.label}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <Badge
@@ -235,9 +250,10 @@ export function BreakHistoryPanel({
                         </p>
                       ) : null}
                     </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

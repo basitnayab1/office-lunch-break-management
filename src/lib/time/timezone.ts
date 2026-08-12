@@ -1,4 +1,4 @@
-import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import { format } from "date-fns";
 
 export const DEFAULT_TIMEZONE = "Asia/Karachi";
@@ -20,6 +20,17 @@ export function formatOfficeDateTime(
   timezone: string
 ): string {
   return formatInTimeZone(isoUtc, timezone, "MMM d, yyyy h:mm a");
+}
+
+export function officeDateTimeInputToUtcIso(
+  value: string,
+  timezone: string
+): string | null {
+  if (!value) return null;
+  const normalized = value.length === 16 ? `${value}:00` : value;
+  const utcDate = fromZonedTime(normalized, timezone);
+  if (Number.isNaN(utcDate.getTime())) return null;
+  return utcDate.toISOString();
 }
 
 export function todayInTimezone(timezone: string): string {

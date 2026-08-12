@@ -10,6 +10,7 @@ import {
   AuthAccessError,
   isAuthAccessError,
 } from "@/lib/auth/guards";
+import { logAudit } from "@/actions/audit";
 
 export type EmployeeWithTempPin = {
   employee: Employee;
@@ -47,6 +48,31 @@ function formatSupabaseError(
 
 function employeeSelect() {
   return "id, employee_id, full_name, email, department, allowed_break_minutes, role, is_active, created_at, updated_at";
+}
+
+function normalizeEmployee(
+  row: Partial<Employee>,
+  overrides: Partial<Employee> = {}
+): Employee {
+  return {
+    id: row.id ?? "",
+    employee_id: row.employee_id ?? "",
+    full_name: row.full_name ?? "",
+    email: row.email ?? null,
+    department: row.department ?? "General",
+    designation: row.designation ?? "",
+    shift: row.shift ?? "General",
+    allowed_break_minutes: row.allowed_break_minutes ?? 60,
+    role: row.role ?? "employee",
+    is_active: row.is_active ?? false,
+    profile_image_url: row.profile_image_url ?? null,
+    joining_date: row.joining_date ?? null,
+    break_access_blocked_until: row.break_access_blocked_until ?? null,
+    break_access_block_reason: row.break_access_block_reason ?? null,
+    created_at: row.created_at ?? new Date().toISOString(),
+    updated_at: row.updated_at ?? new Date().toISOString(),
+    ...overrides,
+  };
 }
 
 function buildEmployeeEmail(
@@ -87,7 +113,9 @@ export async function listEmployees(): Promise<Employee[]> {
     .from("employees")
     .select(employeeSelect())
     .order("full_name");
-  return (data ?? []) as Employee[];
+  return ((data ?? []) as Partial<Employee>[]).map((row) =>
+    normalizeEmployee(row)
+  );
 }
 
 export async function createEmployee(input: {
@@ -99,8 +127,9 @@ export async function createEmployee(input: {
   pin?: string;
   is_active?: boolean;
 }): Promise<ActionResult<EmployeeWithTempPin>> {
+  let admin: Employee;
   try {
-    await requireAdmin();
+    admin = await requireAdmin();
   } catch (error) {
     console.error("[createEmployee] admin auth failed:", error);
     if (isAuthAccessError(error)) {
@@ -308,10 +337,21 @@ export async function createEmployee(input: {
     revalidatePath("/");
     revalidatePath("/admin");
 
+    const normalized = normalizeEmployee(data);
+
+    await logAudit({
+      actorId: admin.id,
+      actorType: "admin",
+      action: "employee_created",
+      targetType: "employee",
+      targetId: data.id,
+      newData: normalized,
+    });
+
     return {
       success: true,
       data: {
-        employee: data,
+        employee: normalized,
         temporaryPin: finalPin,
         pinWasGenerated,
       },
@@ -351,8 +391,9 @@ export async function updateEmployee(
     is_active: boolean;
   }
 ): Promise<ActionResult<Employee>> {
+  let admin: Employee;
   try {
-    await requireAdmin();
+    admin = await requireAdmin();
   } catch (error) {
     console.error("[updateEmployee] admin auth failed:", error);
     return {
@@ -365,6 +406,11 @@ export async function updateEmployee(
 
   try {
     const service = createServiceClient();
+    const { data: before } = await service
+      .from("employees")
+      .select(employeeSelect())
+      .eq("id", id)
+      .maybeSingle();
 
     const { data, error } = await service
       .from("employees")
@@ -394,9 +440,20 @@ export async function updateEmployee(
 
     revalidatePath("/admin/employees");
     revalidatePath("/");
+    const normalized = normalizeEmployee(data as Partial<Employee>);
+
+    await logAudit({
+      actorId: admin.id,
+      actorType: "admin",
+      action: "employee_updated",
+      targetType: "employee",
+      targetId: id,
+      oldData: before ? normalizeEmployee(before as Partial<Employee>) : null,
+      newData: normalized,
+    });
     return {
       success: true,
-      data: data as unknown as Employee,
+      data: normalized,
       message: "Employee updated.",
     };
   } catch (error) {
@@ -408,6 +465,178 @@ export async function updateEmployee(
   }
 }
 
+type AdminProfileInput = {
+  full_name: string;
+  profile_image_url?: string | null;
+  profile_image_file?: File | null;
+};
+
+export async function updateMyAdminProfile(
+  input: AdminProfileInput | FormData
+): Promise<ActionResult<Employee>> {
+  let admin: Employee;
+  try {
+    admin = await requireAdmin();
+  } catch (error) {
+    return {
+      success: false,
+      error: isAuthAccessError(error)
+        ? error.message
+        : "Unauthorized. Admin access required.",
+    };
+  }
+
+  const fullName =
+    input instanceof FormData
+      ? String(input.get("full_name") ?? "").trim()
+      : input.full_name.trim();
+  let imageUrl =
+    input instanceof FormData
+      ? String(input.get("profile_image_url") ?? "").trim() || null
+      : input.profile_image_url?.trim() || null;
+  const profileImageFile =
+    input instanceof FormData
+      ? input.get("profile_image_file")
+      : input.profile_image_file;
+
+  if (fullName.length < 2) {
+    return { success: false, error: "Profile name must be at least 2 characters." };
+  }
+
+  if (
+    imageUrl &&
+    !imageUrl.startsWith("/") &&
+    !/^https?:\/\/.+/i.test(imageUrl)
+  ) {
+    return {
+      success: false,
+      error: "Profile picture must be a valid http(s) URL or a local / path.",
+    };
+  }
+
+  try {
+    const service = createServiceClient();
+    const imageFile = profileImageFile instanceof File ? profileImageFile : null;
+    if (imageFile && imageFile.size > 0) {
+      if (!imageFile.type.startsWith("image/")) {
+        return { success: false, error: "Profile picture must be an image file." };
+      }
+      if (imageFile.size > 2 * 1024 * 1024) {
+        return { success: false, error: "Profile picture must be 2 MB or smaller." };
+      }
+
+      const bucket = "profile-images";
+      const { error: bucketError } = await service.storage.createBucket(bucket, {
+        public: true,
+      });
+      if (
+        bucketError &&
+        !bucketError.message.toLowerCase().includes("already exists")
+      ) {
+        console.error("[updateMyAdminProfile] bucket create failed:", bucketError);
+        return { success: false, error: bucketError.message };
+      }
+
+      const extension =
+        imageFile.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLowerCase() ||
+        "png";
+      const objectPath = `${admin.id}/${Date.now()}.${extension}`;
+      const { error: uploadError } = await service.storage
+        .from(bucket)
+        .upload(objectPath, imageFile, {
+          cacheControl: "3600",
+          upsert: true,
+          contentType: imageFile.type,
+        });
+
+      if (uploadError) {
+        const alreadyExists = uploadError.message
+          .toLowerCase()
+          .includes("already exists");
+        if (!alreadyExists) {
+          console.error("[updateMyAdminProfile] image upload failed:", uploadError);
+          return { success: false, error: uploadError.message };
+        }
+      }
+
+      const { data: publicUrl } = service.storage
+        .from(bucket)
+        .getPublicUrl(objectPath);
+      imageUrl = publicUrl.publicUrl;
+    }
+
+    const { data: before } = await service
+      .from("employees")
+      .select(employeeSelect())
+      .eq("id", admin.id)
+      .maybeSingle();
+
+    let updated = await service
+      .from("employees")
+      .update({
+        full_name: fullName,
+        profile_image_url: imageUrl,
+      })
+      .eq("id", admin.id)
+      .select(employeeSelect())
+      .single();
+
+    if (updated.error?.code === "42703") {
+      updated = await service
+        .from("employees")
+        .update({ full_name: fullName })
+        .eq("id", admin.id)
+        .select(employeeSelect())
+        .single();
+    }
+
+    const { data, error } = updated;
+
+    if (error || !data) {
+      const message = error
+        ? formatSupabaseError(error)
+        : "Profile update returned no row.";
+      console.error("[updateMyAdminProfile] failed:", message);
+      return { success: false, error: message };
+    }
+
+    await service.auth.admin.updateUserById(admin.id, {
+      user_metadata: {
+        full_name: fullName,
+        profile_image_url: imageUrl,
+      },
+    });
+
+    const normalized = normalizeEmployee(data as Partial<Employee>, {
+      profile_image_url: imageUrl,
+    });
+
+    await logAudit({
+      actorId: admin.id,
+      actorType: "admin",
+      action: "admin_profile_updated",
+      targetType: "employee",
+      targetId: admin.id,
+      oldData: before ? normalizeEmployee(before as Partial<Employee>) : null,
+      newData: normalized,
+    });
+
+    revalidatePath("/admin", "layout");
+    revalidatePath("/admin/settings");
+    return {
+      success: true,
+      data: normalized,
+      message: "Profile updated.",
+    };
+  } catch (error) {
+    console.error("[updateMyAdminProfile] unexpected error:", error);
+    return {
+      success: false,
+      error: `Unable to update profile: ${formatUnknownError(error)}`,
+    };
+  }
+}
+
 /**
  * Generates a new temporary PIN and sets it as the Auth password.
  * Old PINs cannot be retrieved (hashed). Returns the new PIN once.
@@ -415,8 +644,9 @@ export async function updateEmployee(
 export async function resetEmployeePin(
   id: string
 ): Promise<ActionResult<{ temporaryPin: string; employee: Employee }>> {
+  let admin: Employee;
   try {
-    await requireAdmin();
+    admin = await requireAdmin();
   } catch (error) {
     console.error("[resetEmployeePin] admin auth failed:", error);
     return {
@@ -472,6 +702,15 @@ export async function resetEmployeePin(
       };
     }
 
+    await logAudit({
+      actorId: admin.id,
+      actorType: "admin",
+      action: "employee_pin_reset",
+      targetType: "employee",
+      targetId: id,
+      newData: { pin_reset: true },
+    });
+
     return {
       success: true,
       data: {
@@ -493,8 +732,9 @@ export async function setEmployeeActive(
   id: string,
   isActive: boolean
 ): Promise<ActionResult> {
+  let admin: Employee;
   try {
-    await requireAdmin();
+    admin = await requireAdmin();
   } catch (error) {
     console.error("[setEmployeeActive] admin auth failed:", error);
     return {
@@ -505,9 +745,14 @@ export async function setEmployeeActive(
     };
   }
 
-  try {
-    const service = createServiceClient();
-    const { error } = await service
+    try {
+      const service = createServiceClient();
+      const { data: before } = await service
+        .from("employees")
+        .select(employeeSelect())
+        .eq("id", id)
+        .maybeSingle();
+      const { error } = await service
       .from("employees")
       .update({ is_active: isActive })
       .eq("id", id);
@@ -520,6 +765,15 @@ export async function setEmployeeActive(
 
     revalidatePath("/admin/employees");
     revalidatePath("/");
+    await logAudit({
+      actorId: admin.id,
+      actorType: "admin",
+      action: isActive ? "employee_activated" : "employee_deactivated",
+      targetType: "employee",
+      targetId: id,
+      oldData: before as unknown as Employee | null,
+      newData: { is_active: isActive },
+    });
     return {
       success: true,
       message: isActive ? "Employee activated." : "Employee deactivated.",

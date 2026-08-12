@@ -97,7 +97,7 @@ export function PwaInstallButton({
             }
           }}
         >
-          Install Bite Station
+          Install App
         </Button>
       </div>
     );
@@ -114,12 +114,12 @@ export function PwaInstallButton({
             size={compact ? "md" : "lg"}
             onClick={() => setShowIosHelp(true)}
           >
-            Install Bite Station
+            Install App
           </Button>
         ) : (
           <div className="max-w-xs rounded-2xl border border-[var(--line)] bg-[var(--bg-elevated)] p-4 text-left shadow-[var(--shadow)]">
             <p className="text-sm font-semibold text-[var(--ink)]">
-              Install Bite Station
+              Install App
             </p>
             <p className="mt-2 text-sm text-[var(--ink-muted)]">
               Tap <strong>Share</strong> → <strong>Add to Home Screen</strong>

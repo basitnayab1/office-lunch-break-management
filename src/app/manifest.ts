@@ -2,10 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Bite Station",
-    short_name: "Bite Station",
-    description:
-      "Bite Station — track and manage employee lunch breaks with timed alarms and office reporting.",
+    name: "//:ai",
+    short_name: "//:ai",
+    description: "Smart breaks and workforce break management.",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -15,6 +14,12 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "en",
     categories: ["business", "productivity"],
     icons: [
+      {
+        src: "/bite-station-logo-transparent.png",
+        sizes: "961x594",
+        type: "image/png",
+        purpose: "any",
+      },
       {
         src: "/icons/icon-192.png",
         sizes: "192x192",

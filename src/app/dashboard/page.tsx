@@ -1,9 +1,13 @@
 import { redirect } from "next/navigation";
 import { getCurrentEmployee, logout } from "@/actions/auth";
 import { getActiveBreak, getMyBreakHistory } from "@/actions/breaks";
+import { getMyUpcomingBookings } from "@/actions/bookings";
 import { getOfficeSettings } from "@/actions/settings";
+import { getMyNotifications } from "@/actions/notifications";
 import { BreakControl } from "@/components/employee/break-control";
 import { BreakHistoryList } from "@/components/employee/break-history";
+import { SlotBooking } from "@/components/employee/slot-booking";
+import { NotificationCenter } from "@/components/notifications/notification-center";
 import { Button } from "@/components/ui/button";
 import { BiteStationBrand } from "@/components/brand/bite-station-logo";
 
@@ -14,10 +18,12 @@ export default async function EmployeeDashboardPage() {
   if (!employee) redirect("/");
   if (employee.role === "admin") redirect("/admin");
 
-  const [activeBreak, history, settings] = await Promise.all([
+  const [activeBreak, history, settings, bookings, notifications] = await Promise.all([
     getActiveBreak(),
     getMyBreakHistory(),
     getOfficeSettings(),
+    getMyUpcomingBookings(),
+    getMyNotifications(),
   ]);
 
   return (
@@ -54,8 +60,14 @@ export default async function EmployeeDashboardPage() {
           initialBreak={activeBreak}
           settings={settings}
         />
+        <SlotBooking initialBookings={bookings} settings={settings} />
         <BreakHistoryList breaks={history} timezone={settings.timezone} />
       </div>
+      <NotificationCenter
+        employee={employee}
+        initialNotifications={notifications}
+        timezone={settings.timezone}
+      />
     </main>
   );
 }

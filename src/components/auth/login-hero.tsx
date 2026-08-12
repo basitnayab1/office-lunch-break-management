@@ -9,15 +9,15 @@ export function LoginHero() {
       <section className="relative hidden h-56 overflow-hidden md:block lg:hidden">
         <Image
           src="/branding/lunch-break-room.png"
-          alt="Bite Station lounge"
+          alt="Break lounge"
           fill
           className="object-cover object-[center_35%]"
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/55 to-black/25" />
         <div className="absolute inset-0 flex items-end justify-between p-6">
-          <div className="text-white">
-            <BiteStationBrand logoSize={52} showTagline inverted />
+          <div className="[filter:drop-shadow(0_1px_0_rgba(255,255,255,0.9))_drop-shadow(0_8px_18px_rgba(255,255,255,0.38))]">
+            <BiteStationBrand logoSize={82} showTagline inverted />
           </div>
           <div className="flex items-end gap-3">
             <div className="w-24 overflow-hidden rounded-xl border-2 border-black/80 bg-black shadow-xl">
@@ -38,7 +38,7 @@ export function LoginHero() {
       <section className="relative hidden h-full min-h-screen overflow-hidden lg:block">
         <Image
           src="/branding/lunch-break-room.png"
-          alt="Bite Station — Eat, Relax, Recharge"
+          alt="Smart break dashboard"
           fill
           priority
           className="object-cover object-center"
@@ -47,8 +47,8 @@ export function LoginHero() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-black/10" />
 
         <div className="absolute inset-0 flex flex-col justify-between p-8 xl:p-10">
-          <div className="animate-rise">
-            <BiteStationBrand logoSize={64} showTagline inverted />
+          <div className="animate-rise [filter:drop-shadow(0_1px_0_rgba(255,255,255,0.9))_drop-shadow(0_10px_24px_rgba(255,255,255,0.42))]">
+            <BiteStationBrand logoSize={112} showTagline inverted />
           </div>
 
           <div className="relative mx-auto w-full max-w-3xl pb-6 pt-10">

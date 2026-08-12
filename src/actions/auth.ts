@@ -10,6 +10,8 @@ import {
   requireAdminSession,
 } from "@/lib/auth/guards";
 import { pinToAuthPassword } from "@/lib/auth/pin";
+import { getPinLock, recordPinAttempt } from "@/lib/auth/rate-limit";
+import { logAudit } from "@/actions/audit";
 
 export type ActionResult<T = undefined> =
   | { success: true; data?: T; message?: string }
@@ -36,6 +38,14 @@ export async function loginWithPin(
     return { success: false, error: "Please select your name and enter your PIN." };
   }
 
+  const lock = await getPinLock(employeeId);
+  if (lock.locked) {
+    return {
+      success: false,
+      error: `Too many failed PIN attempts. Try again in ${lock.retryAfterMinutes} minute(s).`,
+    };
+  }
+
   const service = createServiceClient();
   const { data: employee, error } = await service
     .from("employees")
@@ -44,6 +54,11 @@ export async function loginWithPin(
     .maybeSingle();
 
   if (error || !employee) {
+    await recordPinAttempt({
+      identifier: employeeId,
+      succeeded: false,
+      reason: "employee_not_found",
+    });
     return { success: false, error: "Employee not found." };
   }
 
@@ -75,9 +90,48 @@ export async function loginWithPin(
       password: pin,
     });
     if (legacy.error) {
+      await recordPinAttempt({
+        identifier: employee.id,
+        employeeId: employee.id,
+        succeeded: false,
+        reason: "invalid_pin",
+      });
+      const postFailureLock = await getPinLock(employee.id);
+      if (postFailureLock.locked) {
+        await service.from("notifications").insert({
+          recipient_id: null,
+          audience: "admin",
+          kind: "suspicious_pin_attempt",
+          title: "PIN login locked",
+          body: `${employee.full_name} reached the failed PIN attempt limit.`,
+          entity_type: "employee",
+          entity_id: employee.id,
+        });
+        await logAudit({
+          actorId: employee.id,
+          actorType: "employee",
+          action: "pin_login_locked",
+          targetType: "employee",
+          targetId: employee.id,
+          newData: { reason: "failed_pin_limit" },
+        });
+      }
       return { success: false, error: "Incorrect PIN. Please try again." };
     }
   }
+
+  await recordPinAttempt({
+    identifier: employee.id,
+    employeeId: employee.id,
+    succeeded: true,
+  });
+  await logAudit({
+    actorId: employee.id,
+    actorType: "employee",
+    action: "employee_login",
+    targetType: "employee",
+    targetId: employee.id,
+  });
 
   revalidatePath("/", "layout");
   return { success: true, data: { role: employee.role }, message: `Welcome, ${employee.full_name}` };
@@ -132,6 +186,13 @@ export async function adminLogin(
   }
 
   revalidatePath("/", "layout");
+  await logAudit({
+    actorId: profile.id,
+    actorType: "admin",
+    action: "admin_login",
+    targetType: "employee",
+    targetId: profile.id,
+  });
   return {
     success: true,
     data: { role: "admin" },

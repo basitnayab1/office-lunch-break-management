@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  exportAdvancedAnalyticsCsv,
   exportDailyReportCsv,
   exportMonthlyReportCsv,
   getDailyReport,
@@ -78,6 +79,22 @@ export function ReportsPanel({
             }
           >
             Export daily CSV
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const csv = await exportAdvancedAnalyticsCsv({
+                  startDate: date,
+                  endDate: date,
+                });
+                download(`advanced-analytics-${date}.csv`, csv);
+                toast.success("Advanced analytics exported.");
+              })
+            }
+          >
+            Export advanced CSV
           </Button>
         </div>
 

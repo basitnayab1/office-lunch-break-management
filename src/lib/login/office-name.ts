@@ -12,7 +12,7 @@ export const getCachedOfficeName = unstable_cache(
         !process.env.NEXT_PUBLIC_SUPABASE_URL ||
         !process.env.SUPABASE_SERVICE_ROLE_KEY
       ) {
-        return "Bite Station";
+        return "Office";
       }
       const supabase = createServiceClient();
       const { data } = await supabase
@@ -20,9 +20,9 @@ export const getCachedOfficeName = unstable_cache(
         .select("office_name")
         .eq("id", 1)
         .maybeSingle();
-      return data?.office_name?.trim() || "Bite Station";
+      return data?.office_name?.trim() || "Office";
     } catch {
-      return "Bite Station";
+      return "Office";
     }
   },
   ["public-office-name"],

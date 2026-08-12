@@ -31,14 +31,20 @@ type PinReveal = {
   note: string;
 };
 
-export function EmployeeManager({ employees }: { employees: Employee[] }) {
+export function EmployeeManager({
+  employees,
+  initialSearch = "",
+}: {
+  employees: Employee[];
+  initialSearch?: string;
+}) {
   const router = useRouter();
   const [rows, setRows] = useState(employees);
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [pinReveal, setPinReveal] = useState<PinReveal | null>(null);
   const [pending, startTransition] = useTransition();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">(
     "all"
@@ -47,6 +53,10 @@ export function EmployeeManager({ employees }: { employees: Employee[] }) {
   useEffect(() => {
     setRows(employees);
   }, [employees]);
+
+  useEffect(() => {
+    setSearch(initialSearch);
+  }, [initialSearch]);
 
   const departments = useMemo(
     () =>

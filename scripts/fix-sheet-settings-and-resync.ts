@@ -84,10 +84,16 @@ async function main() {
       employee_id: string;
       full_name: string;
       department: string;
+      designation?: string;
+      shift?: string;
       email: string | null;
       allowed_break_minutes: number;
       role: "employee" | "admin";
       is_active: boolean;
+      profile_image_url?: string | null;
+      joining_date?: string | null;
+      break_access_blocked_until?: string | null;
+      break_access_block_reason?: string | null;
       created_at: string;
       updated_at: string;
     } | null;
@@ -100,7 +106,15 @@ async function main() {
     try {
       const result = await appendBreakToSheet({
         session: { ...session, google_sheet_row_id: null },
-        employee,
+        employee: {
+          ...employee,
+          designation: employee.designation ?? "",
+          shift: employee.shift ?? "General",
+          profile_image_url: employee.profile_image_url ?? null,
+          joining_date: employee.joining_date ?? null,
+          break_access_blocked_until: employee.break_access_blocked_until ?? null,
+          break_access_block_reason: employee.break_access_block_reason ?? null,
+        },
         settings: {
           id: 1,
           office_name: "Office",
@@ -109,6 +123,14 @@ async function main() {
           break_warning_minutes: 2,
           break_test_mode: false,
           break_test_minutes: 3,
+          grace_period_minutes: 5,
+          daily_max_breaks: 3,
+          min_work_minutes_before_break: 0,
+          max_simultaneous_breaks: 10,
+          office_start_time: "09:00:00",
+          office_end_time: "18:00:00",
+          allow_weekend_breaks: false,
+          auto_end_breaks: false,
           google_sheet_id: sheetId,
           google_sheet_name: sheetName,
           created_at: new Date().toISOString(),

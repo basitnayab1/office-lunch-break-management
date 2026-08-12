@@ -19,6 +19,14 @@ function defaultSettings(): OfficeSettings {
     break_warning_minutes: 2,
     break_test_mode: false,
     break_test_minutes: 3,
+    grace_period_minutes: 5,
+    daily_max_breaks: 3,
+    min_work_minutes_before_break: 0,
+    max_simultaneous_breaks: 10,
+    office_start_time: "09:00:00",
+    office_end_time: "18:00:00",
+    allow_weekend_breaks: false,
+    auto_end_breaks: false,
     google_sheet_id: null,
     google_sheet_name: "Break Records",
     created_at: new Date().toISOString(),
@@ -35,6 +43,14 @@ function normalizeSettings(row: Partial<OfficeSettings> | null): OfficeSettings 
     break_warning_minutes: row.break_warning_minutes ?? 2,
     break_test_mode: row.break_test_mode ?? false,
     break_test_minutes: row.break_test_minutes ?? 3,
+    grace_period_minutes: row.grace_period_minutes ?? 5,
+    daily_max_breaks: row.daily_max_breaks ?? 3,
+    min_work_minutes_before_break: row.min_work_minutes_before_break ?? 0,
+    max_simultaneous_breaks: row.max_simultaneous_breaks ?? 10,
+    office_start_time: row.office_start_time ?? "09:00:00",
+    office_end_time: row.office_end_time ?? "18:00:00",
+    allow_weekend_breaks: row.allow_weekend_breaks ?? false,
+    auto_end_breaks: row.auto_end_breaks ?? false,
   };
 }
 
@@ -44,7 +60,7 @@ export const getOfficeSettings = cache(async (): Promise<OfficeSettings> => {
   const { data } = await supabase
     .from("office_settings")
     .select(
-      "id, office_name, timezone, default_break_minutes, break_warning_minutes, break_test_mode, break_test_minutes, google_sheet_id, google_sheet_name, created_at, updated_at"
+      "id, office_name, timezone, default_break_minutes, break_warning_minutes, break_test_mode, break_test_minutes, grace_period_minutes, daily_max_breaks, min_work_minutes_before_break, max_simultaneous_breaks, office_start_time, office_end_time, allow_weekend_breaks, auto_end_breaks, google_sheet_id, google_sheet_name, created_at, updated_at"
     )
     .eq("id", 1)
     .maybeSingle();

@@ -12,6 +12,27 @@ export class AuthAccessError extends Error {
   }
 }
 
+function normalizeEmployee(row: Partial<Employee>): Employee {
+  return {
+    id: row.id ?? "",
+    employee_id: row.employee_id ?? "",
+    full_name: row.full_name ?? "",
+    email: row.email ?? null,
+    department: row.department ?? "General",
+    designation: row.designation ?? "",
+    shift: row.shift ?? "General",
+    allowed_break_minutes: row.allowed_break_minutes ?? 60,
+    role: row.role ?? "employee",
+    is_active: row.is_active ?? false,
+    profile_image_url: row.profile_image_url ?? null,
+    joining_date: row.joining_date ?? null,
+    break_access_blocked_until: row.break_access_blocked_until ?? null,
+    break_access_block_reason: row.break_access_block_reason ?? null,
+    created_at: row.created_at ?? new Date().toISOString(),
+    updated_at: row.updated_at ?? new Date().toISOString(),
+  };
+}
+
 /**
  * Resolves the current session user to an employees row.
  * Uses getUser() (validated JWT), not getSession() alone.
@@ -39,7 +60,10 @@ export const getSessionEmployee = cache(
       .maybeSingle();
 
     if (!employee) return null;
-    return { userId: user.id, employee: employee as Employee };
+    return {
+      userId: user.id,
+      employee: normalizeEmployee(employee as Partial<Employee>),
+    };
   }
 );
 

@@ -11,21 +11,27 @@ export function PwaRegister() {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
 
-    // Avoid SW in local turbopack HMR noise unless production-like
     const isLocalhost =
       window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1";
 
-    // Still register on localhost so installability can be tested with HTTPS tunnels / prod.
+    if (process.env.NODE_ENV !== "production" || isLocalhost) {
+      void navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) =>
+          Promise.all(registrations.map((registration) => registration.unregister()))
+        )
+        .catch(() => undefined);
+      return;
+    }
+
     const register = async () => {
       try {
         const reg = await navigator.serviceWorker.register("/sw.js", {
           scope: "/",
           updateViaCache: "none",
         });
-        if (isLocalhost) {
-          void reg.update();
-        }
+        void reg.update();
       } catch (err) {
         console.warn("[PWA] service worker registration failed:", err);
       }

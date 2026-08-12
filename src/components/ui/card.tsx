@@ -41,7 +41,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-[var(--line)] p-5 shadow-[var(--shadow)]",
+        "rounded-[var(--radius)] border border-[var(--line)] p-5 shadow-[var(--shadow)]",
         tones[tone]
       )}
     >
@@ -71,7 +71,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide",
+        "inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold tracking-wide",
         tones[tone]
       )}
     >

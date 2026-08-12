@@ -1,7 +1,29 @@
 export type UserRole = "employee" | "admin";
-export type BreakStatus = "active" | "within_limit" | "exceeded";
+export type BreakStatus =
+  | "scheduled"
+  | "active"
+  | "within_limit"
+  | "exceeded"
+  | "completed"
+  | "overtime"
+  | "cancelled"
+  | "auto_ended";
 export type SyncStatus = "pending" | "synced" | "failed" | "not_applicable";
 export type BreakType = "breakfast" | "coffee" | "lunch";
+export type BookingStatus = "scheduled" | "waiting" | "cancelled" | "completed" | "missed";
+export type NotificationAudience = "employee" | "admin";
+export type NotificationKind =
+  | "break_10_min_remaining"
+  | "break_5_min_remaining"
+  | "break_completed"
+  | "overtime_warning"
+  | "booking_reminder"
+  | "waiting_slot_promoted"
+  | "admin_overtime_alert"
+  | "google_sheets_failed"
+  | "coverage_low"
+  | "suspicious_pin_attempt"
+  | "system";
 
 export interface Employee {
   id: string;
@@ -9,9 +31,15 @@ export interface Employee {
   full_name: string;
   email: string | null;
   department: string;
+  designation: string;
+  shift: string;
   allowed_break_minutes: number;
   role: UserRole;
   is_active: boolean;
+  profile_image_url: string | null;
+  joining_date: string | null;
+  break_access_blocked_until: string | null;
+  break_access_block_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,10 +60,89 @@ export interface OfficeSettings {
   break_warning_minutes: number;
   break_test_mode: boolean;
   break_test_minutes: number;
+  grace_period_minutes: number;
+  daily_max_breaks: number;
+  min_work_minutes_before_break: number;
+  max_simultaneous_breaks: number;
+  office_start_time: string;
+  office_end_time: string;
+  allow_weekend_breaks: boolean;
+  auto_end_breaks: boolean;
   google_sheet_id: string | null;
   google_sheet_name: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface CoverageRule {
+  id: string;
+  department: string;
+  minimum_available: number;
+  max_on_break: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DepartmentCoverage {
+  department: string;
+  totalEmployees: number;
+  activeBreaks: number;
+  availableEmployees: number;
+  minimumAvailable: number;
+  maxOnBreak: number | null;
+  status: "healthy" | "tight" | "low";
+}
+
+export interface BreakBooking {
+  id: string;
+  employee_id: string;
+  scheduled_start: string;
+  scheduled_end: string;
+  status: BookingStatus;
+  position: number;
+  approved_by: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
+  created_at: string;
+  updated_at: string;
+  employee?: Employee | null;
+}
+
+export interface AppNotification {
+  id: string;
+  recipient_id: string | null;
+  audience: NotificationAudience;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface AuditLog {
+  id: string;
+  actor_id: string | null;
+  actor_type: string;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  old_data: Json | null;
+  new_data: Json | null;
+  ip_address: string | null;
+  created_at: string;
+  actor?: Employee | null;
+}
+
+export interface LoginAttempt {
+  id: string;
+  employee_id: string | null;
+  identifier: string;
+  succeeded: boolean;
+  reason: string | null;
+  created_at: string;
 }
 
 export interface BreakSession {
@@ -55,6 +162,10 @@ export interface BreakSession {
   google_sheet_row_id: number | null;
   google_sheet_synced_at: string | null;
   google_sheet_error: string | null;
+  google_sheet_sync_attempts?: number;
+  google_sheet_next_retry_at?: string | null;
+  approved_overtime_minutes?: number | null;
+  admin_note?: string | null;
   created_at: string;
   updated_at: string;
   employee?: Employee | null;
@@ -65,7 +176,7 @@ export interface BreakMetrics {
   actualMinutes: number;
   extraSeconds: number;
   extraMinutes: number;
-  status: "within_limit" | "exceeded";
+  status: "completed" | "overtime";
   remainingSeconds: number;
   isOvertime: boolean;
 }
@@ -79,6 +190,19 @@ export interface TodayStats {
   breakfastCount: number;
   coffeeCount: number;
   lunchCount: number;
+}
+
+export interface DashboardAnalytics {
+  range: "today" | "this_week" | "last_7_days" | "this_month";
+  title: string;
+  weekActivity: Array<{
+    date: string;
+    label: string;
+    completedBreaks: number;
+  }>;
+  breakTypeDistribution: Record<BreakType, number>;
+  todayByBreakType: Record<BreakType, number>;
+  weeklyTotalBreaks: number;
 }
 
 export interface DailyReport {
@@ -133,9 +257,15 @@ export interface Database {
           full_name: string;
           email: string | null;
           department: string;
+          designation: string;
+          shift: string;
           allowed_break_minutes: number;
           role: UserRole;
           is_active: boolean;
+          profile_image_url: string | null;
+          joining_date: string | null;
+          break_access_blocked_until: string | null;
+          break_access_block_reason: string | null;
           pin_hash: string | null;
           created_at: string;
           updated_at: string;
@@ -146,9 +276,15 @@ export interface Database {
           full_name: string;
           email?: string | null;
           department?: string;
+          designation?: string;
+          shift?: string;
           allowed_break_minutes?: number;
           role?: UserRole;
           is_active?: boolean;
+          profile_image_url?: string | null;
+          joining_date?: string | null;
+          break_access_blocked_until?: string | null;
+          break_access_block_reason?: string | null;
           pin_hash?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -159,9 +295,15 @@ export interface Database {
           full_name?: string;
           email?: string | null;
           department?: string;
+          designation?: string;
+          shift?: string;
           allowed_break_minutes?: number;
           role?: UserRole;
           is_active?: boolean;
+          profile_image_url?: string | null;
+          joining_date?: string | null;
+          break_access_blocked_until?: string | null;
+          break_access_block_reason?: string | null;
           pin_hash?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -186,6 +328,10 @@ export interface Database {
           google_sheet_row_id: number | null;
           google_sheet_synced_at: string | null;
           google_sheet_error: string | null;
+          google_sheet_sync_attempts: number;
+          google_sheet_next_retry_at: string | null;
+          approved_overtime_minutes: number | null;
+          admin_note: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -206,6 +352,10 @@ export interface Database {
           google_sheet_row_id?: number | null;
           google_sheet_synced_at?: string | null;
           google_sheet_error?: string | null;
+          google_sheet_sync_attempts?: number;
+          google_sheet_next_retry_at?: string | null;
+          approved_overtime_minutes?: number | null;
+          admin_note?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -226,6 +376,10 @@ export interface Database {
           google_sheet_row_id?: number | null;
           google_sheet_synced_at?: string | null;
           google_sheet_error?: string | null;
+          google_sheet_sync_attempts?: number;
+          google_sheet_next_retry_at?: string | null;
+          approved_overtime_minutes?: number | null;
+          admin_note?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -248,6 +402,14 @@ export interface Database {
           break_warning_minutes: number;
           break_test_mode: boolean;
           break_test_minutes: number;
+          grace_period_minutes: number;
+          daily_max_breaks: number;
+          min_work_minutes_before_break: number;
+          max_simultaneous_breaks: number;
+          office_start_time: string;
+          office_end_time: string;
+          allow_weekend_breaks: boolean;
+          auto_end_breaks: boolean;
           google_sheet_id: string | null;
           google_sheet_name: string;
           created_at: string;
@@ -261,6 +423,14 @@ export interface Database {
           break_warning_minutes?: number;
           break_test_mode?: boolean;
           break_test_minutes?: number;
+          grace_period_minutes?: number;
+          daily_max_breaks?: number;
+          min_work_minutes_before_break?: number;
+          max_simultaneous_breaks?: number;
+          office_start_time?: string;
+          office_end_time?: string;
+          allow_weekend_breaks?: boolean;
+          auto_end_breaks?: boolean;
           google_sheet_id?: string | null;
           google_sheet_name?: string;
           created_at?: string;
@@ -274,11 +444,141 @@ export interface Database {
           break_warning_minutes?: number;
           break_test_mode?: boolean;
           break_test_minutes?: number;
+          grace_period_minutes?: number;
+          daily_max_breaks?: number;
+          min_work_minutes_before_break?: number;
+          max_simultaneous_breaks?: number;
+          office_start_time?: string;
+          office_end_time?: string;
+          allow_weekend_breaks?: boolean;
+          auto_end_breaks?: boolean;
           google_sheet_id?: string | null;
           google_sheet_name?: string;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
+      };
+      coverage_rules: {
+        Row: CoverageRule;
+        Insert: {
+          id?: string;
+          department: string;
+          minimum_available?: number;
+          max_on_break?: number | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<CoverageRule>;
+        Relationships: [];
+      };
+      break_bookings: {
+        Row: {
+          id: string;
+          employee_id: string;
+          scheduled_start: string;
+          scheduled_end: string;
+          status: BookingStatus;
+          position: number;
+          approved_by: string | null;
+          cancelled_at: string | null;
+          cancellation_reason: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          employee_id: string;
+          scheduled_start: string;
+          scheduled_end: string;
+          status?: BookingStatus;
+          position?: number;
+          approved_by?: string | null;
+          cancelled_at?: string | null;
+          cancellation_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          employee_id?: string;
+          scheduled_start?: string;
+          scheduled_end?: string;
+          status?: BookingStatus;
+          position?: number;
+          approved_by?: string | null;
+          cancelled_at?: string | null;
+          cancellation_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "break_bookings_employee_id_fkey";
+            columns: ["employee_id"];
+            isOneToOne: false;
+            referencedRelation: "employees";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notifications: {
+        Row: AppNotification;
+        Insert: {
+          id?: string;
+          recipient_id?: string | null;
+          audience?: NotificationAudience;
+          kind?: NotificationKind;
+          title: string;
+          body: string;
+          entity_type?: string | null;
+          entity_id?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          recipient_id?: string | null;
+          audience?: NotificationAudience;
+          kind?: NotificationKind;
+          title?: string;
+          body?: string;
+          entity_type?: string | null;
+          entity_id?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      audit_logs: {
+        Row: AuditLog;
+        Insert: {
+          id?: string;
+          actor_id?: string | null;
+          actor_type?: string;
+          action: string;
+          target_type: string;
+          target_id?: string | null;
+          old_data?: Json | null;
+          new_data?: Json | null;
+          ip_address?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<AuditLog>;
+        Relationships: [];
+      };
+      login_attempts: {
+        Row: LoginAttempt;
+        Insert: {
+          id?: string;
+          employee_id?: string | null;
+          identifier: string;
+          succeeded?: boolean;
+          reason?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<LoginAttempt>;
         Relationships: [];
       };
     };
@@ -310,6 +610,9 @@ export interface Database {
       break_status: BreakStatus;
       sync_status: SyncStatus;
       break_type: BreakType;
+      booking_status: BookingStatus;
+      notification_audience: NotificationAudience;
+      notification_kind: NotificationKind;
     };
     CompositeTypes: {
       [_ in never]: never;

@@ -43,6 +43,9 @@ export function SettingsForm({
   });
   const [pending, startTransition] = useTransition();
   const [testing, setTesting] = useState(false);
+  const sheetUrl = envSheetId
+    ? `https://docs.google.com/spreadsheets/d/${encodeURIComponent(envSheetId)}/edit`
+    : null;
 
   function onSave(e: React.FormEvent) {
     e.preventDefault();
@@ -152,6 +155,20 @@ export function SettingsForm({
             onClick={() => void testConnection()}
           >
             {testing ? "Testing..." : "Test connection"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!sheetUrl}
+            onClick={() => {
+              if (!sheetUrl) {
+                toast.error("Google Sheet ID is not configured.");
+                return;
+              }
+              window.open(sheetUrl, "_blank", "noopener,noreferrer");
+            }}
+          >
+            Open Sheet
           </Button>
           <Button
             type="button"

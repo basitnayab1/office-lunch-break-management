@@ -1,9 +1,9 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-/** Intrinsic pixel size of public/bite-station-logo-display.png */
-const LOGO_WIDTH = 480;
-const LOGO_HEIGHT = 320;
+/** Intrinsic size of public/bite-station-logo-transparent.png */
+const LOGO_WIDTH = 961;
+const LOGO_HEIGHT = 594;
 
 type BiteStationLogoProps = {
   className?: string;
@@ -13,7 +13,7 @@ type BiteStationLogoProps = {
 };
 
 /**
- * Official Bite Station logo (uploaded PNG).
+ * Official app logo.
  * Uses next/image optimization in production; keeps original proportions.
  */
 export function BiteStationLogo({
@@ -26,12 +26,13 @@ export function BiteStationLogo({
 
   return (
     <Image
-      src="/bite-station-logo-display.png"
-      alt="Bite Station"
+      src="/bite-station-logo-transparent.png"
+      alt="//:ai"
       width={width}
       height={height}
       priority={priority}
       loading={priority ? undefined : "lazy"}
+      unoptimized
       className={cn("shrink-0 object-contain", className)}
       style={{ width, height }}
       sizes={`${width}px`}
@@ -39,12 +40,10 @@ export function BiteStationLogo({
   );
 }
 
-/** Compact brand lockup: logo + “Bite Station” label. */
+/** Compact brand lockup: logo only. */
 export function BiteStationBrand({
   className,
   logoSize = 40,
-  showTagline = false,
-  inverted = false,
   priority = false,
 }: {
   className?: string;
@@ -54,28 +53,8 @@ export function BiteStationBrand({
   priority?: boolean;
 }) {
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
+    <div className={cn("flex items-center", className)}>
       <BiteStationLogo size={logoSize} priority={priority} />
-      <div className="min-w-0">
-        <p
-          className={cn(
-            "truncate text-sm font-semibold tracking-wide",
-            inverted ? "text-white" : "text-[var(--brand)]"
-          )}
-        >
-          Bite Station
-        </p>
-        {showTagline ? (
-          <p
-            className={cn(
-              "text-[11px] uppercase tracking-[0.16em]",
-              inverted ? "text-white/75" : "text-[var(--ink-muted)]"
-            )}
-          >
-            Eat · Relax · Recharge
-          </p>
-        ) : null}
-      </div>
     </div>
   );
 }

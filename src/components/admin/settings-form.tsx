@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateOfficeSettings } from "@/actions/settings";
 import { retryFailedSheetSyncs } from "@/actions/breaks";
@@ -31,6 +32,7 @@ export function SettingsForm({
   serviceAccountEmail?: string | null;
   sheetsOnly?: boolean;
 }) {
+  const router = useRouter();
   const [form, setForm] = useState({
     office_name: settings.office_name,
     timezone: settings.timezone,
@@ -58,7 +60,22 @@ export function SettingsForm({
         toast.error(result.error);
         return;
       }
+      if (result.data?.office_name) {
+        setForm((current) => ({
+          ...current,
+          office_name: result.data?.office_name ?? current.office_name,
+          timezone: result.data?.timezone ?? current.timezone,
+          google_sheet_id: result.data?.google_sheet_id ?? "",
+          google_sheet_name: result.data?.google_sheet_name ?? current.google_sheet_name,
+        }));
+        window.dispatchEvent(
+          new CustomEvent("office-settings-updated", {
+            detail: { officeName: result.data.office_name },
+          })
+        );
+      }
       toast.success(result.message);
+      router.refresh();
     });
   }
 

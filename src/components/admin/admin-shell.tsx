@@ -166,6 +166,7 @@ export function AdminShell({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
+  const [currentOfficeName, setCurrentOfficeName] = useState(officeName);
   const [profileName, setProfileName] = useState(adminName);
   const [profileImageUrl, setProfileImageUrl] = useState(adminProfileImageUrl ?? "");
   const [profileDraftName, setProfileDraftName] = useState(adminName);
@@ -259,6 +260,23 @@ export function AdminShell({
   useEffect(() => {
     setNotifications(initialNotifications);
   }, [initialNotifications]);
+
+  useEffect(() => {
+    setCurrentOfficeName(officeName);
+  }, [officeName]);
+
+  useEffect(() => {
+    function onOfficeSettingsUpdated(event: Event) {
+      const detail = (event as CustomEvent<{ officeName?: string }>).detail;
+      const nextOfficeName = detail?.officeName?.trim();
+      if (nextOfficeName) setCurrentOfficeName(nextOfficeName);
+    }
+
+    window.addEventListener("office-settings-updated", onOfficeSettingsUpdated);
+    return () => {
+      window.removeEventListener("office-settings-updated", onOfficeSettingsUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     setProfileName(adminName);
@@ -390,13 +408,13 @@ export function AdminShell({
               "mb-4 flex h-14 w-full items-center justify-between border-b border-[var(--line)] px-4 pb-5 text-left",
               sidebarCollapsed && "justify-center px-0"
             )}
-            title={officeName}
+            title={currentOfficeName}
           >
             <span className="flex items-center gap-3 text-base font-semibold">
               <span className="grid h-8 w-8 place-items-center rounded-md border border-[var(--line)] text-[var(--ink-muted)]">
                 <Icon name="layout" className="h-4 w-4" />
               </span>
-              {!sidebarCollapsed ? officeName : null}
+              {!sidebarCollapsed ? currentOfficeName : null}
             </span>
             {!sidebarCollapsed ? (
               <Icon name="chevron" className="h-4 w-4 text-[var(--ink-muted)]" />

@@ -46,6 +46,15 @@ In the Supabase SQL Editor, run in order:
 7. `supabase/migrations/007_security_hardening.sql` (function `search_path` + least-privilege EXECUTE)
 8. `supabase/migrations/008_security_advisor_residual.sql` (optional; superseded by 009)
 9. `supabase/migrations/009_remove_security_definer_helpers.sql` (clear SECURITY DEFINER helper Advisor warnings)
+10. `supabase/migrations/010_workforce_management.sql` (departments, shifts, coverage rules, and break slot bookings)
+11. `supabase/migrations/011_notifications_audit_break_rpc.sql` (notifications, audit log, and break RPC updates)
+12. `supabase/migrations/012_automation_security_reporting.sql` (automation, reporting, and security updates)
+
+To verify slot booking is available in the connected Supabase project:
+
+```bash
+npm run diagnose-bookings
+```
 
 Enable **Realtime** for `break_sessions` if the publication line did not apply automatically (Database → Replication).
 
@@ -282,6 +291,7 @@ npm run start
 npm run lint
 npm run typecheck
 npm run seed
+npm run diagnose-bookings
 npm run promote-admin -- admin@yourcompany.com "Office Admin" ADMIN01
 ```
 

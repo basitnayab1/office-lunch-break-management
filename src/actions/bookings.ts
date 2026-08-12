@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin, requireEmployee, type ActionResult } from "@/actions/auth";
 import { createEmployeeNotification } from "@/actions/notifications";
 import { logAudit } from "@/actions/audit";
-import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   DEFAULT_TIMEZONE,
@@ -67,6 +66,7 @@ export async function getMyUpcomingBookings(): Promise<BreakBooking[]> {
     .from("break_bookings")
     .select("*")
     .eq("employee_id", employee.id)
+    .gte("scheduled_end", new Date().toISOString())
     .in("status", ["scheduled", "waiting"])
     .order("scheduled_start", { ascending: true })
     .limit(5);
@@ -88,13 +88,17 @@ export async function isBreakBookingAvailable(): Promise<boolean> {
     return false;
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase
+  const service = createServiceClient();
+  const { error } = await service
     .from("break_bookings")
     .select("id", { count: "exact", head: true })
     .limit(1);
 
-  return !error;
+  if (!error) return true;
+  if (!isMissingBookingsTable(error)) {
+    console.error("[isBreakBookingAvailable]", error);
+  }
+  return false;
 }
 
 export async function getUpcomingBookings(): Promise<BreakBooking[]> {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type FormEvent } from "react";
 import { toast } from "sonner";
 import { cancelBreakBooking, reserveBreakSlot } from "@/actions/bookings";
 import {
@@ -29,6 +29,7 @@ export function SlotBooking({
   const [start, setStart] = useState(initialStartValue);
   const [minutes, setMinutes] = useState(settings.default_break_minutes);
   const [bookings, setBookings] = useState(initialBookings);
+  const [lastAction, setLastAction] = useState("");
   const [pending, startTransition] = useTransition();
   const minStart = initialMinValue;
 
@@ -36,12 +37,26 @@ export function SlotBooking({
     setBookings(initialBookings);
   }, [initialBookings]);
 
-  function onReserve() {
+  function onReserve(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    if (!start) {
+      toast.error("Please choose a slot start time.");
+      return;
+    }
+    if (!minutes || minutes < 5) {
+      toast.error("Please enter at least 5 minutes.");
+      return;
+    }
+    setLastAction("Reserving slot...");
+    toast.loading("Reserving slot...", { id: "reserve-slot" });
     startTransition(async () => {
       try {
         const result = await reserveBreakSlot(start, minutes);
         if (!result.success) {
+          setLastAction("");
+          toast.dismiss("reserve-slot");
           if (result.error === "__BOOKINGS_DISABLED__") {
+            toast.error("Slot booking is not available yet.");
             router.refresh();
             return;
           }
@@ -58,10 +73,14 @@ export function SlotBooking({
             );
           });
         }
-        toast.success(result.message ?? "Slot reserved.");
+        setLastAction(result.message ?? "Slot reserved.");
+        toast.success(result.message ?? "Slot reserved.", { id: "reserve-slot" });
         router.refresh();
       } catch (error) {
-        toast.error("An unexpected error occurred while reserving the slot.");
+        setLastAction("");
+        toast.error("An unexpected error occurred while reserving the slot.", {
+          id: "reserve-slot",
+        });
         console.error(error);
       }
     });
@@ -103,7 +122,10 @@ export function SlotBooking({
         <Badge tone="brand">Booking</Badge>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_140px_auto] sm:items-end">
+      <form
+        onSubmit={onReserve}
+        className="mt-5 grid gap-3 sm:grid-cols-[1fr_140px_auto] sm:items-end"
+      >
         <div>
           <Label htmlFor="slot-start">Slot start</Label>
           <Input
@@ -125,10 +147,15 @@ export function SlotBooking({
             onChange={(event) => setMinutes(Number(event.target.value))}
           />
         </div>
-        <Button onClick={onReserve} disabled={pending}>
-          Reserve
+        <Button type="submit" disabled={pending}>
+          {pending ? "Reserving..." : "Reserve"}
         </Button>
-      </div>
+      </form>
+      {lastAction ? (
+        <p className="mt-2 text-sm font-medium text-[var(--brand)]">
+          {lastAction}
+        </p>
+      ) : null}
 
       <div className="mt-6 space-y-3">
         {bookings.length === 0 ? (

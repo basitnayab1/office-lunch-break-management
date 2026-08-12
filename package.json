@@ -11,6 +11,7 @@
     "seed": "tsx scripts/seed.ts",
     "promote-admin": "tsx scripts/promote-admin.ts",
     "create-admin": "tsx scripts/create-admin.ts",
+    "diagnose-bookings": "tsx scripts/diagnose-bookings.ts",
     "enable-auth-hibp": "tsx scripts/enable-auth-hibp.ts"
   },
   "dependencies": {

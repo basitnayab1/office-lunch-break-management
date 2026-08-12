@@ -18,7 +18,7 @@ import {
 } from "@/lib/breaks/alarms";
 import { BREAK_TYPE_OPTIONS, breakTypeLabel } from "@/lib/breaks/types";
 import { formatDuration } from "@/lib/utils";
-import { formatOfficeTime } from "@/lib/time/timezone";
+import { formatOfficeTime, normalizeTimezone } from "@/lib/time/timezone";
 import type {
   BreakSession,
   BreakType,
@@ -30,6 +30,63 @@ import { Badge, Card } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+
+const breakOptionStyles = {
+  breakfast: {
+    accent: "#00985b",
+    soft: "#e2f5ea",
+    ring: "border-[#cfe4dc] hover:border-[#00985b]/45",
+    selected: "border-[#00985b] bg-[#f7fffb] shadow-[0_14px_34px_rgba(0,152,91,0.15)]",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-10 w-10 fill-current">
+        <path d="M5 9h11v4a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-2a2 2 0 0 1 2-2Zm11 2h1.5a1.5 1.5 0 0 1 0 3H16v-3Zm-8-6c.4.7.4 1.3 0 2-.2.4-.2.8.1 1.3h-1.7c-.4-.8-.4-1.5 0-2.2.2-.4.2-.8 0-1.1H8Zm4 0c.4.7.4 1.3 0 2-.2.4-.2.8.1 1.3h-1.7c-.4-.8-.4-1.5 0-2.2.2-.4.2-.8 0-1.1H12ZM4 20h13v1.5H4V20Z" />
+      </svg>
+    ),
+  },
+  coffee: {
+    accent: "#2187ee",
+    soft: "#e4f1ff",
+    ring: "border-[#c8def4] hover:border-[#2187ee]/45",
+    selected: "border-[#2187ee] bg-[#f7fbff] shadow-[0_14px_34px_rgba(33,135,238,0.15)]",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-10 w-10 fill-current">
+        <path d="M5 9h11v4a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-2a2 2 0 0 1 2-2Zm11 2h1.5a1.5 1.5 0 0 1 0 3H16v-3ZM8 4.6c.4.7.4 1.3 0 2-.2.4-.2.8.1 1.3H6.4c-.4-.8-.4-1.5 0-2.2.2-.4.2-.8 0-1.1H8Zm4 0c.4.7.4 1.3 0 2-.2.4-.2.8.1 1.3h-1.7c-.4-.8-.4-1.5 0-2.2.2-.4.2-.8 0-1.1H12ZM4 20h13v1.5H4V20Z" />
+      </svg>
+    ),
+  },
+  lunch: {
+    accent: "#7b47d6",
+    soft: "#eee5fb",
+    ring: "border-[#ddcff0] hover:border-[#7b47d6]/45",
+    selected: "border-[#7b47d6] bg-[#fcf9ff] shadow-[0_14px_34px_rgba(123,71,214,0.15)]",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-10 w-10 fill-none stroke-current stroke-[2.5]">
+        <path d="M6 4v7" />
+        <path d="M9 4v7" />
+        <path d="M4 4v5a4 4 0 0 0 4 4v8" />
+        <path d="M16 4v17" />
+        <path d="M20 4v10c-2.5 0-4-1.6-4-4V4" />
+      </svg>
+    ),
+  },
+} as const;
+
+function ClockBadge() {
+  return (
+    <div className="relative hidden h-24 w-24 shrink-0 place-items-center rounded-full bg-[#e8f4ef] text-[#006e51] md:grid">
+      <span className="absolute -left-2 top-2 text-lg font-bold">+</span>
+      <span className="absolute -right-2 top-1 text-lg font-bold">+</span>
+      <span className="absolute -bottom-1 left-0 text-lg font-bold">+</span>
+      <span className="absolute -bottom-2 right-0 text-lg font-bold">+</span>
+      <span className="grid h-12 w-12 place-items-center rounded-full border-4 border-current bg-white/30">
+        <svg viewBox="0 0 24 24" className="h-8 w-8 fill-none stroke-current stroke-[2.2]">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 3" />
+        </svg>
+      </span>
+    </div>
+  );
+}
 
 function requestNotificationPermissionOnce() {
   if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -65,6 +122,7 @@ export function BreakControl({
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [clockOffsetMs, setClockOffsetMs] = useState(0);
   const [pending, startTransition] = useTransition();
+  const [mounted, setMounted] = useState(false);
 
   const warningNotifiedForId = useRef<string | null>(null);
   const exceededNotifiedForId = useRef<string | null>(null);
@@ -73,6 +131,11 @@ export function BreakControl({
   const fiveMinuteNotifiedForId = useRef<string | null>(null);
 
   const warningMinutes = settings.break_warning_minutes ?? 2;
+  const safeTimezone = normalizeTimezone(settings.timezone);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     getServerNow().then((iso) => {
@@ -238,6 +301,22 @@ export function BreakControl({
     };
   }, []);
 
+  if (!mounted) {
+    return (
+      <Card className="animate-rise rounded-[18px] p-8 shadow-[0_18px_50px_rgba(20,32,51,0.10)] md:p-10">
+        <div className="h-8 w-24 rounded-md bg-black/5" />
+        <div className="mt-4 h-10 w-56 rounded-md bg-black/5" />
+        <div className="mt-2 h-5 w-96 max-w-full rounded-md bg-black/5" />
+        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className="h-28 rounded-2xl bg-black/5" />
+          <div className="h-28 rounded-2xl bg-black/5" />
+          <div className="h-28 rounded-2xl bg-black/5" />
+        </div>
+        <div className="mt-10 h-20 w-full rounded-[22px] bg-black/5" />
+      </Card>
+    );
+  }
+
   function onStart() {
     if (!selectedType) {
       toast.error("Please select a break type first.");
@@ -288,30 +367,37 @@ export function BreakControl({
 
   if (!activeBreak || !metrics) {
     return (
-      <Card className="animate-rise p-8 md:p-10">
-        <div>
-          <Badge tone="brand">Ready</Badge>
-          <h2 className="mt-4 font-[family-name:var(--font-display)] text-3xl font-semibold">
-            Break Status
-          </h2>
-          <p className="mt-2 text-[var(--ink-muted)]">
+      <Card className="animate-rise rounded-[18px] border-[#dce3ec] bg-white/95 p-8 shadow-[0_20px_54px_rgba(22,41,70,0.11)] md:p-10">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <Badge tone="brand">
+              <span className="mr-2 h-2.5 w-2.5 rounded-full bg-[#24b476]" />
+              Ready
+            </Badge>
+            <h2 className="mt-4 text-3xl font-extrabold tracking-normal text-[#10233c] md:text-4xl">
+              Break Status
+            </h2>
+            <p className="mt-4 text-lg font-medium text-[#5c687d]">
             Select a break type, then start your break. Duration is assigned
             automatically.
-          </p>
-          {settings.break_test_mode ? (
-            <p className="mt-3 rounded-xl bg-[var(--warn-soft)] px-3 py-2 text-sm text-[var(--warn)]">
-              Test mode is on: breaks last {settings.break_test_minutes} minutes
-              (admin testing only).
             </p>
-          ) : null}
+            {settings.break_test_mode ? (
+              <p className="mt-3 rounded-xl bg-[var(--warn-soft)] px-3 py-2 text-sm text-[var(--warn)]">
+                Test mode is on: breaks last {settings.break_test_minutes} minutes
+                (admin testing only).
+              </p>
+            ) : null}
+          </div>
+          <ClockBadge />
         </div>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+        <div className="mt-9 grid gap-4 md:grid-cols-3">
           {BREAK_TYPE_OPTIONS.map((option) => {
             const selected = selectedType === option.type;
             const displayMinutes = settings.break_test_mode
               ? settings.break_test_minutes
               : option.minutes;
+            const styles = breakOptionStyles[option.type];
             return (
               <button
                 key={option.type}
@@ -319,23 +405,34 @@ export function BreakControl({
                 onClick={() => setSelectedType(option.type)}
                 disabled={pending}
                 className={cn(
-                  "rounded-2xl border px-4 py-5 text-left transition",
-                  selected
-                    ? "border-[var(--brand)] bg-[var(--brand-soft)] shadow-[0_10px_24px_rgba(15,106,90,0.18)]"
-                    : "border-[var(--line)] bg-white hover:border-[var(--brand)]/50"
+                  "group relative min-h-[10rem] rounded-[16px] border bg-white px-6 py-6 text-left transition",
+                  selected ? styles.selected : styles.ring
                 )}
+                style={{ color: styles.accent }}
               >
-                <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--brand)]">
-                  {option.label}
-                </p>
-                <p className="mt-2 font-[family-name:var(--font-display)] text-2xl font-semibold">
-                  {displayMinutes} min
-                </p>
-                <p className="mt-1 text-sm text-[var(--ink-muted)]">
-                  {settings.break_test_mode
-                    ? `Test duration — normally ${option.description}`
-                    : `${option.label} — ${option.description}`}
-                </p>
+                <span
+                  className="absolute bottom-5 left-9 h-1 w-20 rounded-full"
+                  style={{ backgroundColor: styles.accent }}
+                />
+                <span
+                  className="grid h-22 w-22 place-items-center rounded-full"
+                  style={{ backgroundColor: styles.soft }}
+                >
+                  {styles.icon}
+                </span>
+                <span className="absolute left-[8.5rem] top-7">
+                  <span className="block text-base font-extrabold uppercase">
+                    {option.label}
+                  </span>
+                  <span className="mt-3 block text-3xl font-extrabold text-[#10233c]">
+                    {displayMinutes} min
+                  </span>
+                  <span className="mt-3 block text-base font-medium text-[#657189]">
+                    {settings.break_test_mode
+                      ? `Test duration, normally ${option.description}`
+                      : `${option.label} — ${option.description}`}
+                  </span>
+                </span>
               </button>
             );
           })}
@@ -343,11 +440,20 @@ export function BreakControl({
 
         <Button
           size="xl"
-          className="mt-10 w-full"
+          className="mt-10 h-20 w-full rounded-[14px] bg-[#006b4c] text-2xl font-extrabold shadow-[inset_0_-4px_0_rgba(0,0,0,0.12),0_18px_34px_rgba(0,107,76,0.24)] hover:bg-[#007b58]"
           onClick={onStart}
           disabled={pending || !selectedType}
         >
-          {pending ? "Starting..." : "START BREAK"}
+          {pending ? (
+            "Starting..."
+          ) : (
+            <>
+              <svg viewBox="0 0 24 24" className="h-8 w-8 fill-none stroke-current stroke-[2]">
+                <path d="m8 5 11 7-11 7V5Z" />
+              </svg>
+              START BREAK
+            </>
+          )}
         </Button>
       </Card>
     );
@@ -365,7 +471,7 @@ export function BreakControl({
   return (
     <Card
       className={cn(
-        "animate-rise overflow-hidden p-8 md:p-10",
+        "animate-rise overflow-hidden rounded-[18px] border-[#dce3ec] bg-white/95 p-8 shadow-[0_20px_54px_rgba(22,41,70,0.11)] md:p-10",
         overtime && "border-[var(--danger)] break-alarm-exceeded",
         warning && "border-[var(--warn)] break-alarm-warning"
       )}
@@ -382,6 +488,10 @@ export function BreakControl({
           Live · synced to server time
         </span>
       </div>
+
+      <h2 className="mt-5 text-3xl font-extrabold tracking-normal text-[#10233c] md:text-4xl">
+        {breakTypeLabel(activeBreak.break_type)} Break
+      </h2>
 
       {warning ? (
         <div className="mt-6 rounded-2xl bg-[var(--warn-soft)] px-5 py-4 text-[var(--warn)]">
@@ -407,7 +517,7 @@ export function BreakControl({
         <div>
           <p className="text-sm text-[var(--ink-muted)]">Started</p>
           <p className="mt-1 text-xl font-semibold">
-            {formatOfficeTime(activeBreak.started_at, settings.timezone)}
+            {formatOfficeTime(activeBreak.started_at, safeTimezone)}
           </p>
         </div>
         <div>
@@ -454,7 +564,7 @@ export function BreakControl({
       <Button
         size="xl"
         variant="danger"
-        className="mt-10 w-full"
+        className="mt-10 h-20 w-full rounded-[14px] text-2xl font-extrabold"
         onClick={onEnd}
         disabled={pending}
       >

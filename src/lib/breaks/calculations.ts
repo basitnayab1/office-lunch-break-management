@@ -28,7 +28,7 @@ export function calculateBreakMetrics(
     actualMinutes: Math.round((actualSeconds / 60) * 100) / 100,
     extraSeconds,
     extraMinutes: Math.round((extraSeconds / 60) * 100) / 100,
-    status: isOvertime ? "overtime" : "completed",
+    status: isOvertime ? "exceeded" : "within_limit",
     remainingSeconds,
     isOvertime,
   };

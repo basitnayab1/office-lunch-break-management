@@ -30,7 +30,6 @@ ALTER TABLE public.office_settings
 ALTER TABLE public.employees
   ADD COLUMN IF NOT EXISTS designation TEXT NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS shift TEXT NOT NULL DEFAULT 'General',
-  ADD COLUMN IF NOT EXISTS profile_image_url TEXT,
   ADD COLUMN IF NOT EXISTS joining_date DATE,
   ADD COLUMN IF NOT EXISTS break_access_blocked_until TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS break_access_block_reason TEXT;
@@ -159,3 +158,40 @@ CREATE POLICY break_bookings_select_own_or_admin ON public.break_bookings
     )
   );
 
+DROP POLICY IF EXISTS break_bookings_insert_own_or_admin ON public.break_bookings;
+CREATE POLICY break_bookings_insert_own_or_admin ON public.break_bookings
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    employee_id = auth.uid()
+    OR EXISTS (
+      SELECT 1
+      FROM private.employee_claims c
+      WHERE c.id = auth.uid()
+        AND c.role = 'admin'
+        AND c.is_active = true
+    )
+  );
+
+DROP POLICY IF EXISTS break_bookings_update_own_or_admin ON public.break_bookings;
+CREATE POLICY break_bookings_update_own_or_admin ON public.break_bookings
+  FOR UPDATE TO authenticated
+  USING (
+    employee_id = auth.uid()
+    OR EXISTS (
+      SELECT 1
+      FROM private.employee_claims c
+      WHERE c.id = auth.uid()
+        AND c.role = 'admin'
+        AND c.is_active = true
+    )
+  )
+  WITH CHECK (
+    employee_id = auth.uid()
+    OR EXISTS (
+      SELECT 1
+      FROM private.employee_claims c
+      WHERE c.id = auth.uid()
+        AND c.role = 'admin'
+        AND c.is_active = true
+    )
+  );

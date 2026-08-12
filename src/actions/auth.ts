@@ -216,6 +216,7 @@ export async function changeMyPassword(input: {
   if (!session?.employee.email) {
     return { success: false, error: "Login session not found." };
   }
+  const email = session.employee.email;
 
   const currentPassword = input.currentPassword.trim();
   const newPassword = input.newPassword.trim();
@@ -237,12 +238,12 @@ export async function changeMyPassword(input: {
     }
 
     const primary = await supabase.auth.signInWithPassword({
-      email: employee.email,
+      email,
       password: pinToAuthPassword(currentPassword),
     });
     if (primary.error) {
       const legacy = await supabase.auth.signInWithPassword({
-        email: employee.email,
+        email,
         password: currentPassword,
       });
       if (legacy.error) {
@@ -273,7 +274,7 @@ export async function changeMyPassword(input: {
   }
 
   const verified = await supabase.auth.signInWithPassword({
-    email: employee.email,
+    email,
     password: currentPassword,
   });
   if (verified.error) {

@@ -8,7 +8,7 @@ import {
   markNotificationRead,
 } from "@/actions/notifications";
 import { createClient } from "@/lib/supabase/client";
-import { formatOfficeDateTime } from "@/lib/time/timezone";
+import { formatOfficeDateTime, normalizeTimezone } from "@/lib/time/timezone";
 import type { AppNotification, Employee } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/card";
@@ -43,6 +43,7 @@ export function NotificationCenter({
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [, startTransition] = useTransition();
+  const safeTimezone = normalizeTimezone(timezone);
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.read_at).length,
@@ -121,19 +122,23 @@ export function NotificationCenter({
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-40">
+    <div className="fixed bottom-7 right-7 z-40">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="relative h-12 w-12 rounded-full border border-[var(--line)] bg-white text-xl shadow-[var(--shadow)] transition hover:scale-105"
+        className="relative grid h-20 w-20 place-items-center rounded-full border border-[#006b4c]/20 bg-[#006b4c] text-white shadow-[0_16px_35px_rgba(0,107,76,0.28)] transition hover:scale-105"
         aria-label="Notifications"
       >
-        !
+        <svg viewBox="0 0 24 24" className="h-9 w-9 fill-current">
+          <path d="M12 22a2.6 2.6 0 0 0 2.45-1.75h-4.9A2.6 2.6 0 0 0 12 22Zm7-6.3-1.5-1.55V10a5.55 5.55 0 0 0-4.25-5.4V3.8a1.25 1.25 0 0 0-2.5 0v.8A5.55 5.55 0 0 0 6.5 10v4.15L5 15.7V18h14v-2.3Z" />
+        </svg>
         {unreadCount ? (
-          <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-[var(--danger)] px-1 text-xs font-semibold text-white">
+          <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-[#49bd43] px-1 text-xs font-semibold text-white">
             {unreadCount}
           </span>
-        ) : null}
+        ) : (
+          <span className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-[#49bd43]" />
+        )}
       </button>
 
       {open ? (
@@ -174,7 +179,7 @@ export function NotificationCenter({
                     {notification.body}
                   </p>
                   <p className="mt-2 text-xs text-[var(--ink-muted)]">
-                    {formatOfficeDateTime(notification.created_at, timezone)}
+                    {formatOfficeDateTime(notification.created_at, safeTimezone)}
                   </p>
                 </button>
               ))
@@ -185,4 +190,3 @@ export function NotificationCenter({
     </div>
   );
 }
-

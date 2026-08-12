@@ -12,8 +12,8 @@ export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState(employee.full_name);
-  const [imageUrl, setImageUrl] = useState(employee.profile_image_url ?? "");
+  const [name, setName] = useState(employee.full_name ?? "Employee");
+  const [imageUrl, setImageUrl] = useState(employee.avatar_url ?? "");
   const [fileName, setFileName] = useState("");
   const [pinForm, setPinForm] = useState({
     currentPassword: "",
@@ -22,7 +22,8 @@ export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
   });
   const [pending, startTransition] = useTransition();
 
-  const initials = name
+  const safeName = name?.trim() || "Employee";
+  const initials = safeName
     .split(" ")
     .map((part) => part[0])
     .join("")
@@ -38,9 +39,9 @@ export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
       >
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
+            <img
             src={imageUrl}
-            alt={name}
+            alt={safeName}
             className="h-full w-full object-cover"
             onError={(event) => {
               event.currentTarget.style.display = "none";
@@ -67,7 +68,7 @@ export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
         return;
       }
       setName(result.data.full_name);
-      setImageUrl(result.data.profile_image_url ?? "");
+      setImageUrl(result.data.avatar_url ?? "");
       setFileName("");
       if (fileRef.current) fileRef.current.value = "";
       toast.success(result.message ?? "Profile updated.");
@@ -93,19 +94,34 @@ export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
   }
 
   return (
-    <div className="relative flex items-center gap-3">
-      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
+    <div className="relative flex items-center gap-4">
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => setOpen(true)}
+        className="h-16 rounded-[12px] border-[#dce4ed] px-8 text-lg font-bold text-[#00664b] shadow-none hover:bg-[#f8fbfa]"
+      >
+        <svg viewBox="0 0 24 24" className="h-7 w-7 fill-none stroke-current stroke-[2]">
+          <path d="M20 21a8 8 0 0 0-16 0" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
         Profile
       </Button>
       <Button
         type="button"
-        variant="secondary"
+        variant="primary"
+        className="h-16 rounded-[12px] bg-[#006b4c] px-8 text-lg font-bold shadow-[0_12px_24px_rgba(0,107,76,0.22)] hover:bg-[#007b58]"
         onClick={async () => {
           await logout();
           router.push("/");
           router.refresh();
         }}
       >
+        <svg viewBox="0 0 24 24" className="h-7 w-7 fill-none stroke-current stroke-[2]">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+          <path d="M10 17l5-5-5-5" />
+          <path d="M15 12H3" />
+        </svg>
         Sign out
       </Button>
 

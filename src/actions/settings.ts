@@ -1,63 +1,23 @@
 "use server";
 
-import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { requireAdmin, type ActionResult } from "@/actions/auth";
 import { revalidatePath, revalidateTag } from "next/cache";
 import type { OfficeSettings } from "@/types/database";
 import { DEFAULT_TIMEZONE } from "@/lib/time/timezone";
+import {
+  defaultOfficeSettings,
+  normalizeOfficeSettings,
+} from "@/lib/settings/defaults";
 
 const WARNING_MINUTE_OPTIONS = [1, 2, 3, 5] as const;
 
-function defaultSettings(): OfficeSettings {
-  return {
-    id: 1,
-    office_name: "Office",
-    timezone: DEFAULT_TIMEZONE,
-    default_break_minutes: 60,
-    break_warning_minutes: 2,
-    break_test_mode: false,
-    break_test_minutes: 3,
-    grace_period_minutes: 5,
-    daily_max_breaks: 3,
-    min_work_minutes_before_break: 0,
-    max_simultaneous_breaks: 10,
-    office_start_time: "09:00:00",
-    office_end_time: "18:00:00",
-    allow_weekend_breaks: false,
-    auto_end_breaks: false,
-    google_sheet_id: null,
-    google_sheet_name: "Break Records",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-}
-
-function normalizeSettings(row: Partial<OfficeSettings> | null): OfficeSettings {
-  const base = defaultSettings();
-  if (!row) return base;
-  return {
-    ...base,
-    ...row,
-    break_warning_minutes: row.break_warning_minutes ?? 2,
-    break_test_mode: row.break_test_mode ?? false,
-    break_test_minutes: row.break_test_minutes ?? 3,
-    grace_period_minutes: row.grace_period_minutes ?? 5,
-    daily_max_breaks: row.daily_max_breaks ?? 3,
-    min_work_minutes_before_break: row.min_work_minutes_before_break ?? 0,
-    max_simultaneous_breaks: row.max_simultaneous_breaks ?? 10,
-    office_start_time: row.office_start_time ?? "09:00:00",
-    office_end_time: row.office_end_time ?? "18:00:00",
-    allow_weekend_breaks: row.allow_weekend_breaks ?? false,
-    auto_end_breaks: row.auto_end_breaks ?? false,
-  };
-}
-
-/** Dedupes settings reads within a single server render/request. */
-export const getOfficeSettings = cache(async (): Promise<OfficeSettings> => {
-  const supabase = await createClient();
-  const { data } = await supabase
+async function fetchOfficeSettingsRow(): Promise<{
+  settings: OfficeSettings;
+  usedFallback: boolean;
+}> {
+  const supabase = createServiceClient();
+  const fullSelect = await supabase
     .from("office_settings")
     .select(
       "id, office_name, timezone, default_break_minutes, break_warning_minutes, break_test_mode, break_test_minutes, grace_period_minutes, daily_max_breaks, min_work_minutes_before_break, max_simultaneous_breaks, office_start_time, office_end_time, allow_weekend_breaks, auto_end_breaks, google_sheet_id, google_sheet_name, created_at, updated_at"
@@ -65,8 +25,33 @@ export const getOfficeSettings = cache(async (): Promise<OfficeSettings> => {
     .eq("id", 1)
     .maybeSingle();
 
-  return normalizeSettings(data as Partial<OfficeSettings> | null);
-});
+  if (!fullSelect.error) {
+    return {
+      settings: normalizeOfficeSettings(fullSelect.data as Partial<OfficeSettings> | null),
+      usedFallback: false,
+    };
+  }
+
+  const fallbackSelect = await supabase
+    .from("office_settings")
+    .select(
+      "id, office_name, timezone, default_break_minutes, google_sheet_id, google_sheet_name, created_at, updated_at"
+    )
+    .eq("id", 1)
+    .maybeSingle();
+
+  return {
+    settings: normalizeOfficeSettings(
+      fallbackSelect.data as Partial<OfficeSettings> | null
+    ),
+    usedFallback: true,
+  };
+}
+
+export async function getOfficeSettings(): Promise<OfficeSettings> {
+  const { settings } = await fetchOfficeSettingsRow();
+  return settings;
+}
 
 export async function updateOfficeSettings(input: {
   office_name: string;
@@ -124,7 +109,43 @@ export async function updateOfficeSettings(input: {
     }
 
     const service = createServiceClient();
-    const { data, error } = await (
+    const { settings: current, usedFallback } = await fetchOfficeSettingsRow().catch(
+      () => ({
+        settings: defaultOfficeSettings(),
+        usedFallback: true,
+      })
+    );
+    const settingsPayload = {
+      id: 1,
+      office_name: input.office_name.trim(),
+      timezone: input.timezone.trim() || DEFAULT_TIMEZONE,
+      default_break_minutes:
+        Number(input.default_break_minutes) || current.default_break_minutes,
+      break_warning_minutes: warningMinutes,
+      break_test_mode: Boolean(input.break_test_mode),
+      break_test_minutes: testMinutes,
+      grace_period_minutes: current.grace_period_minutes,
+      daily_max_breaks: current.daily_max_breaks,
+      min_work_minutes_before_break: current.min_work_minutes_before_break,
+      max_simultaneous_breaks: current.max_simultaneous_breaks,
+      office_start_time: current.office_start_time || "09:00:00",
+      office_end_time: current.office_end_time || "18:00:00",
+      allow_weekend_breaks: current.allow_weekend_breaks,
+      auto_end_breaks: current.auto_end_breaks,
+      google_sheet_id: input.google_sheet_id?.trim() || null,
+      google_sheet_name: input.google_sheet_name.trim() || "Break Records",
+    };
+    const minimalSettingsPayload = {
+      id: 1,
+      office_name: settingsPayload.office_name,
+      timezone: settingsPayload.timezone,
+      default_break_minutes: settingsPayload.default_break_minutes,
+      google_sheet_id: settingsPayload.google_sheet_id,
+      google_sheet_name: settingsPayload.google_sheet_name,
+    };
+    const payload = usedFallback ? minimalSettingsPayload : settingsPayload;
+
+    let saved = await (
       service as unknown as {
         from: (t: string) => {
           upsert: (v: Record<string, unknown>) => {
@@ -139,19 +160,32 @@ export async function updateOfficeSettings(input: {
       }
     )
       .from("office_settings")
-      .upsert({
-        id: 1,
-        office_name: input.office_name.trim(),
-        timezone: input.timezone.trim() || DEFAULT_TIMEZONE,
-        default_break_minutes: input.default_break_minutes,
-        break_warning_minutes: warningMinutes,
-        break_test_mode: Boolean(input.break_test_mode),
-        break_test_minutes: testMinutes,
-        google_sheet_id: input.google_sheet_id?.trim() || null,
-        google_sheet_name: input.google_sheet_name.trim() || "Break Records",
-      })
+      .upsert(payload)
       .select("*")
       .single();
+
+    if (saved.error && "code" in saved.error && saved.error.code === "PGRST204") {
+      saved = await (
+        service as unknown as {
+          from: (t: string) => {
+            upsert: (v: Record<string, unknown>) => {
+              select: (c: string) => {
+                single: () => Promise<{
+                  data: OfficeSettings | null;
+                  error: { message: string; code?: string } | null;
+                }>;
+              };
+            };
+          };
+        }
+      )
+        .from("office_settings")
+        .upsert(minimalSettingsPayload)
+        .select("*")
+        .single();
+    }
+
+    const { data, error } = saved;
 
     if (error || !data) {
       console.error("[updateOfficeSettings]", error);
@@ -174,7 +208,7 @@ export async function updateOfficeSettings(input: {
     revalidateTag("office-settings");
     return {
       success: true,
-      data: normalizeSettings(data),
+      data: normalizeOfficeSettings(data),
       message: "Settings saved.",
     };
   } catch (err) {

@@ -1,4 +1,3 @@
-import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Employee } from "@/types/database";
 
@@ -27,7 +26,7 @@ function normalizeEmployee(
     allowed_break_minutes: row.allowed_break_minutes ?? 60,
     role: row.role ?? "employee",
     is_active: row.is_active ?? false,
-    profile_image_url: row.profile_image_url ?? null,
+    avatar_url: row.avatar_url ?? null,
     joining_date: row.joining_date ?? null,
     break_access_blocked_until: row.break_access_blocked_until ?? null,
     break_access_block_reason: row.break_access_block_reason ?? null,
@@ -42,39 +41,37 @@ function normalizeEmployee(
  * Uses getUser() (validated JWT), not getSession() alone.
  * Cached per request to avoid duplicate Auth/DB lookups.
  */
-export const getSessionEmployee = cache(
-  async (): Promise<{
-    userId: string;
-    employee: Employee;
-  } | null> => {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
+export async function getSessionEmployee(): Promise<{
+  userId: string;
+  employee: Employee;
+} | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
-    if (error || !user) return null;
+  if (error || !user) return null;
 
-    const { data: employee } = await supabase
-      .from("employees")
-      .select(
-        "id, employee_id, full_name, email, department, allowed_break_minutes, role, is_active, created_at, updated_at"
-      )
-      .eq("id", user.id)
-      .maybeSingle();
+  const { data: employee } = await supabase
+    .from("employees")
+    .select(
+      "id, employee_id, full_name, email, department, allowed_break_minutes, role, is_active, created_at, updated_at"
+    )
+    .eq("id", user.id)
+    .maybeSingle();
 
-    if (!employee) return null;
-    return {
-      userId: user.id,
-      employee: normalizeEmployee(employee as Partial<Employee>, {
-        profile_image_url:
-          typeof user.user_metadata?.profile_image_url === "string"
-            ? user.user_metadata.profile_image_url
-            : null,
-      }),
-    };
-  }
-);
+  if (!employee) return null;
+  return {
+    userId: user.id,
+    employee: normalizeEmployee(employee as Partial<Employee>, {
+      avatar_url:
+        typeof user.user_metadata?.avatar_url === "string"
+          ? user.user_metadata.avatar_url
+          : null,
+    }),
+  };
+}
 
 /** Active employee session required. */
 export async function requireActiveEmployee(): Promise<Employee> {

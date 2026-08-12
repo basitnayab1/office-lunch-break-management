@@ -167,9 +167,9 @@ export function AdminShell({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [currentOfficeName, setCurrentOfficeName] = useState(officeName);
-  const [profileName, setProfileName] = useState(adminName);
+  const [profileName, setProfileName] = useState(adminName ?? "Admin");
   const [profileImageUrl, setProfileImageUrl] = useState(adminProfileImageUrl ?? "");
-  const [profileDraftName, setProfileDraftName] = useState(adminName);
+  const [profileDraftName, setProfileDraftName] = useState(adminName ?? "Admin");
   const [profileDraftFileName, setProfileDraftFileName] = useState("");
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -182,8 +182,9 @@ export function AdminShell({
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [now, setNow] = useState(() => new Date());
-  const firstName = profileName.split(" ")[0] || "Admin";
-  const initials = profileName
+  const safeProfileName = profileName?.trim() || "Admin";
+  const firstName = safeProfileName.split(" ")[0] || "Admin";
+  const initials = safeProfileName
     .split(" ")
     .map((part) => part[0])
     .join("")
@@ -211,7 +212,7 @@ export function AdminShell({
     hour: "numeric",
     minute: "2-digit",
   }).format(now);
-  const officeLocationLabel = "Techno Ai Lahore";
+  const officeLocationLabel = currentOfficeName;
   const fullOfficeDate = new Intl.DateTimeFormat("en-US", {
     timeZone: safeTimezone,
     weekday: "long",
@@ -283,8 +284,9 @@ export function AdminShell({
   }, []);
 
   useEffect(() => {
-    setProfileName(adminName);
-    setProfileDraftName(adminName);
+    const nextName = adminName?.trim() || "Admin";
+    setProfileName(nextName);
+    setProfileDraftName(nextName);
   }, [adminName]);
 
   useEffect(() => {
@@ -368,7 +370,7 @@ export function AdminShell({
         return;
       }
       setProfileName(result.data.full_name);
-      setProfileImageUrl(result.data.profile_image_url ?? "");
+      setProfileImageUrl(result.data.avatar_url ?? "");
       setProfileDraftName(result.data.full_name);
       setProfileDraftFileName("");
       if (profileFileRef.current) profileFileRef.current.value = "";

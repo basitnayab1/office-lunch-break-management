@@ -16,14 +16,8 @@ import { Input, Label, Select } from "@/components/ui/field";
 import { Badge, Card } from "@/components/ui/card";
 
 function statusDisplay(status: BreakSession["status"]) {
-  if (status === "overtime" || status === "exceeded") {
+  if (status === "exceeded") {
     return { label: "Overtime", tone: "danger" as const };
-  }
-  if (status === "auto_ended") {
-    return { label: "Auto Ended", tone: "warn" as const };
-  }
-  if (status === "cancelled") {
-    return { label: "Cancelled", tone: "neutral" as const };
   }
   return { label: "Within Limit", tone: "ok" as const };
 }
@@ -126,8 +120,6 @@ export function BreakHistoryPanel({
             <Label>Status</Label>
             <Select value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="">All</option>
-              <option value="completed">Completed</option>
-              <option value="overtime">Overtime</option>
               <option value="within_limit">Within Limit</option>
               <option value="exceeded">Exceeded</option>
             </Select>

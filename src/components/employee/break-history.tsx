@@ -1,18 +1,16 @@
 import { Badge, Card } from "@/components/ui/card";
 import { breakTypeLabel } from "@/lib/breaks/types";
-import { formatOfficeDateTime, formatOfficeTime } from "@/lib/time/timezone";
+import {
+  formatOfficeDateTime,
+  formatOfficeTime,
+  normalizeTimezone,
+} from "@/lib/time/timezone";
 import { formatMinutesDisplay } from "@/lib/utils";
 import type { BreakSession } from "@/types/database";
 
 function statusDisplay(status: BreakSession["status"]) {
-  if (status === "overtime" || status === "exceeded") {
+  if (status === "exceeded") {
     return { label: "Overtime", tone: "danger" as const };
-  }
-  if (status === "auto_ended") {
-    return { label: "Auto Ended", tone: "warn" as const };
-  }
-  if (status === "cancelled") {
-    return { label: "Cancelled", tone: "neutral" as const };
   }
   return { label: "Within Limit", tone: "ok" as const };
 }
@@ -24,6 +22,7 @@ export function BreakHistoryList({
   breaks: BreakSession[];
   timezone: string;
 }) {
+  const safeTimezone = normalizeTimezone(timezone);
   if (breaks.length === 0) {
     return (
       <Card className="p-6 text-[var(--ink-muted)]">
@@ -61,10 +60,10 @@ export function BreakHistoryList({
                   <td className="px-4 py-3">{b.break_date}</td>
                   <td className="px-4 py-3">{breakTypeLabel(b.break_type)}</td>
                   <td className="px-4 py-3">
-                    {formatOfficeTime(b.started_at, timezone)}
+                    {formatOfficeTime(b.started_at, safeTimezone)}
                   </td>
                   <td className="px-4 py-3">
-                    {b.ended_at ? formatOfficeTime(b.ended_at, timezone) : "-"}
+                    {b.ended_at ? formatOfficeTime(b.ended_at, safeTimezone) : "-"}
                   </td>
                   <td className="px-4 py-3">{b.allowed_minutes} min</td>
                   <td className="px-4 py-3">
@@ -89,8 +88,8 @@ export function BreakHistoryList({
         </table>
       </div>
       <p className="border-t border-[var(--line)] px-6 py-3 text-xs text-[var(--ink-muted)]">
-        Times shown in {timezone}. Last updated{" "}
-        {formatOfficeDateTime(new Date().toISOString(), timezone)}.
+        Times shown in {safeTimezone}. Last updated{" "}
+        {formatOfficeDateTime(new Date().toISOString(), safeTimezone)}.
       </p>
     </Card>
   );

@@ -9,7 +9,6 @@ import {
   isBreakType,
 } from "@/lib/breaks/types";
 import { getOfficeDate } from "@/lib/time/timezone";
-import { DEFAULT_TIMEZONE } from "@/lib/time/timezone";
 import { formatOfficeTime } from "@/lib/time/timezone";
 import {
   appendBreakToSheet,
@@ -24,6 +23,7 @@ import {
 import { logAudit } from "@/actions/audit";
 import { revalidatePath } from "next/cache";
 import type { BreakSession, OfficeSettings } from "@/types/database";
+import { normalizeOfficeSettings } from "@/lib/settings/defaults";
 
 function formatActionError(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -35,41 +35,44 @@ function formatActionError(error: unknown) {
   }
 }
 
+function isMissingSchemaError(error: { code?: string; message?: string } | null) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return (
+    error?.code === "PGRST202" ||
+    error?.code === "42883" ||
+    message.includes("schema cache") ||
+    message.includes("validate_break_start")
+  );
+}
+
+function isMissingColumnError(
+  error: { code?: string; message?: string } | null,
+  column: string
+) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return (
+    error?.code === "PGRST204" ||
+    (message.includes("schema cache") && message.includes(column.toLowerCase()))
+  );
+}
+
+function breakStatusFromMetrics(extraSeconds: number): "within_limit" | "exceeded" {
+  return extraSeconds > 0 ? "exceeded" : "within_limit";
+}
+
 async function getSettings(): Promise<OfficeSettings> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { data } = await supabase
     .from("office_settings")
     .select("*")
     .eq("id", 1)
     .maybeSingle();
 
-  return (
-    (data as OfficeSettings | null) ?? {
-      id: 1,
-      office_name: "Office",
-      timezone: DEFAULT_TIMEZONE,
-      default_break_minutes: 60,
-      break_warning_minutes: 2,
-      break_test_mode: false,
-      break_test_minutes: 3,
-      grace_period_minutes: 5,
-      daily_max_breaks: 3,
-      min_work_minutes_before_break: 0,
-      max_simultaneous_breaks: 10,
-      office_start_time: "09:00:00",
-      office_end_time: "18:00:00",
-      allow_weekend_breaks: false,
-      auto_end_breaks: false,
-      google_sheet_id: null,
-      google_sheet_name: "Break Records",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-  );
+  return normalizeOfficeSettings(data as Partial<OfficeSettings> | null);
 }
 
-function timeToMinutes(value: string) {
-  const [hours = "0", minutes = "0"] = value.split(":");
+function timeToMinutes(value: string | null | undefined, fallback: string) {
+  const [hours = "0", minutes = "0"] = (value || fallback).split(":");
   return Number(hours) * 60 + Number(minutes);
 }
 
@@ -79,9 +82,14 @@ function isWithinOfficeWindow(nowIso: string, settings: OfficeSettings) {
     return false;
   }
 
-  const current = timeToMinutes(formatOfficeTime(nowIso, settings.timezone, "HH:mm"));
-  const start = timeToMinutes(settings.office_start_time);
-  const end = timeToMinutes(settings.office_end_time);
+  const current = timeToMinutes(
+    formatOfficeTime(nowIso, settings.timezone, "HH:mm"),
+    "00:00"
+  );
+  const startTime = settings.office_start_time || "09:00:00";
+  const endTime = settings.office_end_time || "18:00:00";
+  const start = timeToMinutes(startTime, "09:00:00");
+  const end = timeToMinutes(endTime, "18:00:00");
 
   if (start <= end) {
     return current >= start && current <= end;
@@ -110,7 +118,9 @@ async function validateBreakStartRules({
   }
 
   if (!isWithinOfficeWindow(startedAt, settings)) {
-    return `Breaks are allowed during office hours (${settings.office_start_time.slice(0, 5)}-${settings.office_end_time.slice(0, 5)}).`;
+    const startTime = settings.office_start_time || "09:00:00";
+    const endTime = settings.office_end_time || "18:00:00";
+    return `Breaks are allowed during office hours (${startTime.slice(0, 5)}-${endTime.slice(0, 5)}).`;
   }
 
   const { data: rpcRows, error: rpcError } = await service.rpc("validate_break_start", {
@@ -118,7 +128,7 @@ async function validateBreakStartRules({
     p_break_date: breakDate,
     p_now: startedAt,
   });
-  if (rpcError && rpcError.code !== "42883") {
+  if (rpcError && !isMissingSchemaError(rpcError)) {
     console.error("[validate_break_start RPC]", rpcError);
     return rpcError.message || "Break validation failed.";
   }
@@ -282,7 +292,7 @@ export async function startBreak(
       return { success: false, error: rulesError };
     }
 
-    const { data, error } = await service
+    let inserted = await service
       .from("break_sessions")
       .insert({
         employee_id: employee.id,
@@ -293,11 +303,28 @@ export async function startBreak(
         allowed_minutes: allowedMinutes,
         status: "active",
         google_sheet_sync_status: "not_applicable",
-        google_sheet_sync_attempts: 0,
-        google_sheet_next_retry_at: null,
       })
       .select("*")
       .single();
+
+    if (isMissingColumnError(inserted.error, "google_sheet_sync_status")) {
+      inserted = await service
+        .from("break_sessions")
+        .insert({
+          employee_id: employee.id,
+          break_date: breakDate,
+          break_type: breakType,
+          started_at: startedAt,
+          ended_at: null,
+          allowed_minutes: allowedMinutes,
+          status: "active",
+          google_sheet_sync_status: "not_applicable",
+        })
+        .select("*")
+        .single();
+    }
+
+    const { data, error } = inserted;
 
     // Unique partial index blocks duplicate active breaks under race conditions.
     if (error) {
@@ -366,7 +393,7 @@ export async function endBreak(): Promise<ActionResult<BreakSession>> {
       active.allowed_minutes
     );
 
-    const { data: completed, error: updateError } = await service
+    let endedUpdate = await service
       .from("break_sessions")
       .update({
         ended_at: endedAt,
@@ -374,15 +401,36 @@ export async function endBreak(): Promise<ActionResult<BreakSession>> {
         actual_seconds: metrics.actual_seconds,
         extra_minutes: metrics.extra_minutes,
         extra_seconds: metrics.extra_seconds,
-        status: metrics.extra_seconds > 0 ? "overtime" : "completed",
+        status: breakStatusFromMetrics(metrics.extra_seconds),
         google_sheet_sync_status: "pending",
         google_sheet_error: null,
-        google_sheet_next_retry_at: null,
       })
       .eq("id", active.id)
       .eq("status", "active")
       .select("*")
       .maybeSingle();
+
+    if (
+      isMissingColumnError(endedUpdate.error, "google_sheet_error") ||
+      isMissingColumnError(endedUpdate.error, "google_sheet_sync_status")
+    ) {
+      endedUpdate = await service
+        .from("break_sessions")
+        .update({
+          ended_at: endedAt,
+          actual_minutes: metrics.actual_minutes,
+          actual_seconds: metrics.actual_seconds,
+          extra_minutes: metrics.extra_minutes,
+          extra_seconds: metrics.extra_seconds,
+          status: breakStatusFromMetrics(metrics.extra_seconds),
+        })
+        .eq("id", active.id)
+        .eq("status", "active")
+        .select("*")
+        .maybeSingle();
+    }
+
+    const { data: completed, error: updateError } = endedUpdate;
 
     if (updateError || !completed) {
       return {
@@ -471,7 +519,7 @@ export async function syncBreakToGoogleSheets(
     allowed_break_minutes: number;
     role: "employee" | "admin";
     is_active: boolean;
-    profile_image_url?: string | null;
+    avatar_url?: string | null;
     joining_date?: string | null;
     break_access_blocked_until?: string | null;
     break_access_block_reason?: string | null;
@@ -494,7 +542,7 @@ export async function syncBreakToGoogleSheets(
   }
 
   if (!isGoogleSheetsConfigured(settings.google_sheet_id)) {
-    await service
+    const syncSkippedUpdate = await service
       .from("break_sessions")
       .update({
         google_sheet_sync_status: "not_applicable",
@@ -503,6 +551,12 @@ export async function syncBreakToGoogleSheets(
           : "GOOGLE_SHEET_ID not configured",
       })
       .eq("id", breakSessionId);
+    if (isMissingColumnError(syncSkippedUpdate.error, "google_sheet_error")) {
+      await service
+        .from("break_sessions")
+        .update({ google_sheet_sync_status: "not_applicable" })
+        .eq("id", breakSessionId);
+    }
     return {
       success: true,
       message: "Google Sheets sync skipped (not configured).",
@@ -522,7 +576,7 @@ export async function syncBreakToGoogleSheets(
           ...employee,
           designation: employee.designation ?? "",
           shift: employee.shift ?? "General",
-          profile_image_url: employee.profile_image_url ?? null,
+          avatar_url: employee.avatar_url ?? null,
           joining_date: employee.joining_date ?? null,
           break_access_blocked_until: employee.break_access_blocked_until ?? null,
           break_access_block_reason: employee.break_access_block_reason ?? null,
@@ -545,16 +599,25 @@ export async function syncBreakToGoogleSheets(
       updatedRange,
     });
 
-    await service
+    const syncedUpdate = await service
       .from("break_sessions")
       .update({
         google_sheet_sync_status: "synced",
         google_sheet_row_id: rowNumber,
         google_sheet_synced_at: new Date().toISOString(),
         google_sheet_error: null,
-        google_sheet_next_retry_at: null,
       })
       .eq("id", breakSessionId);
+    if (isMissingColumnError(syncedUpdate.error, "google_sheet_error")) {
+      await service
+        .from("break_sessions")
+        .update({
+          google_sheet_sync_status: "synced",
+          google_sheet_row_id: rowNumber,
+          google_sheet_synced_at: new Date().toISOString(),
+        })
+        .eq("id", breakSessionId);
+    }
 
     return {
       success: true,
@@ -568,19 +631,19 @@ export async function syncBreakToGoogleSheets(
       message,
       err
     );
-    const nextAttempts = Number(session.google_sheet_sync_attempts ?? 0) + 1;
-    const retryDelayMinutes = Math.min(60, Math.max(5, nextAttempts * 5));
-    await service
+    const failedUpdate = await service
       .from("break_sessions")
       .update({
         google_sheet_sync_status: "failed",
         google_sheet_error: message,
-        google_sheet_sync_attempts: nextAttempts,
-        google_sheet_next_retry_at: new Date(
-          Date.now() + retryDelayMinutes * 60_000
-        ).toISOString(),
       })
       .eq("id", breakSessionId);
+    if (isMissingColumnError(failedUpdate.error, "google_sheet_error")) {
+      await service
+        .from("break_sessions")
+        .update({ google_sheet_sync_status: "failed" })
+        .eq("id", breakSessionId);
+    }
 
     await createAdminNotification({
       kind: "google_sheets_failed",
@@ -605,11 +668,17 @@ export async function retryFailedSheetSyncs(): Promise<ActionResult<{ count: num
   }
   const service = createServiceClient();
 
-  const { data: failed } = await service
+  const failedQuery = await service
     .from("break_sessions")
     .select("id")
     .in("google_sheet_sync_status", ["failed", "pending"])
     .neq("status", "active");
+  const failed = isMissingColumnError(
+    failedQuery.error,
+    "google_sheet_sync_status"
+  )
+    ? []
+    : failedQuery.data;
 
   let count = 0;
   for (const row of failed ?? []) {
@@ -664,7 +733,7 @@ export async function adminEndEmployeeBreak(
     endedAt,
     active.allowed_minutes
   );
-  const { data: ended, error } = await service
+  let adminEndUpdate = await service
     .from("break_sessions")
     .update({
       ended_at: endedAt,
@@ -672,7 +741,7 @@ export async function adminEndEmployeeBreak(
       actual_seconds: metrics.actual_seconds,
       extra_minutes: metrics.extra_minutes,
       extra_seconds: metrics.extra_seconds,
-      status: metrics.extra_seconds > 0 ? "overtime" : "completed",
+      status: breakStatusFromMetrics(metrics.extra_seconds),
       google_sheet_sync_status: "pending",
       google_sheet_error: null,
       admin_note: reason.trim(),
@@ -681,6 +750,26 @@ export async function adminEndEmployeeBreak(
     .eq("status", "active")
     .select("*")
     .maybeSingle();
+
+  if (isMissingColumnError(adminEndUpdate.error, "google_sheet_error")) {
+    adminEndUpdate = await service
+      .from("break_sessions")
+      .update({
+        ended_at: endedAt,
+        actual_minutes: metrics.actual_minutes,
+        actual_seconds: metrics.actual_seconds,
+        extra_minutes: metrics.extra_minutes,
+        extra_seconds: metrics.extra_seconds,
+        status: breakStatusFromMetrics(metrics.extra_seconds),
+        admin_note: reason.trim(),
+      })
+      .eq("id", breakSessionId)
+      .eq("status", "active")
+      .select("*")
+      .maybeSingle();
+  }
+
+  const { data: ended, error } = adminEndUpdate;
 
   if (error || !ended) {
     return { success: false, error: "Unable to end employee break." };

@@ -127,7 +127,7 @@ async function main() {
         allowed_break_minutes: 60,
         role: "employee",
         is_active: true,
-        profile_image_url: null,
+        avatar_url: null,
         joining_date: null,
         break_access_blocked_until: null,
         break_access_block_reason: null,

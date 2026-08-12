@@ -1,13 +1,8 @@
 export type UserRole = "employee" | "admin";
 export type BreakStatus =
-  | "scheduled"
   | "active"
   | "within_limit"
-  | "exceeded"
-  | "completed"
-  | "overtime"
-  | "cancelled"
-  | "auto_ended";
+  | "exceeded";
 export type SyncStatus = "pending" | "synced" | "failed" | "not_applicable";
 export type BreakType = "breakfast" | "coffee" | "lunch";
 export type BookingStatus = "scheduled" | "waiting" | "cancelled" | "completed" | "missed";
@@ -36,7 +31,7 @@ export interface Employee {
   allowed_break_minutes: number;
   role: UserRole;
   is_active: boolean;
-  profile_image_url: string | null;
+  avatar_url: string | null;
   joining_date: string | null;
   break_access_blocked_until: string | null;
   break_access_block_reason: string | null;
@@ -162,8 +157,6 @@ export interface BreakSession {
   google_sheet_row_id: number | null;
   google_sheet_synced_at: string | null;
   google_sheet_error: string | null;
-  google_sheet_sync_attempts?: number;
-  google_sheet_next_retry_at?: string | null;
   approved_overtime_minutes?: number | null;
   admin_note?: string | null;
   created_at: string;
@@ -176,7 +169,7 @@ export interface BreakMetrics {
   actualMinutes: number;
   extraSeconds: number;
   extraMinutes: number;
-  status: "completed" | "overtime";
+  status: "within_limit" | "exceeded";
   remainingSeconds: number;
   isOvertime: boolean;
 }
@@ -262,7 +255,6 @@ export interface Database {
           allowed_break_minutes: number;
           role: UserRole;
           is_active: boolean;
-          profile_image_url: string | null;
           joining_date: string | null;
           break_access_blocked_until: string | null;
           break_access_block_reason: string | null;
@@ -281,7 +273,6 @@ export interface Database {
           allowed_break_minutes?: number;
           role?: UserRole;
           is_active?: boolean;
-          profile_image_url?: string | null;
           joining_date?: string | null;
           break_access_blocked_until?: string | null;
           break_access_block_reason?: string | null;
@@ -300,7 +291,6 @@ export interface Database {
           allowed_break_minutes?: number;
           role?: UserRole;
           is_active?: boolean;
-          profile_image_url?: string | null;
           joining_date?: string | null;
           break_access_blocked_until?: string | null;
           break_access_block_reason?: string | null;
@@ -328,8 +318,6 @@ export interface Database {
           google_sheet_row_id: number | null;
           google_sheet_synced_at: string | null;
           google_sheet_error: string | null;
-          google_sheet_sync_attempts: number;
-          google_sheet_next_retry_at: string | null;
           approved_overtime_minutes: number | null;
           admin_note: string | null;
           created_at: string;
@@ -352,8 +340,6 @@ export interface Database {
           google_sheet_row_id?: number | null;
           google_sheet_synced_at?: string | null;
           google_sheet_error?: string | null;
-          google_sheet_sync_attempts?: number;
-          google_sheet_next_retry_at?: string | null;
           approved_overtime_minutes?: number | null;
           admin_note?: string | null;
           created_at?: string;
@@ -376,8 +362,6 @@ export interface Database {
           google_sheet_row_id?: number | null;
           google_sheet_synced_at?: string | null;
           google_sheet_error?: string | null;
-          google_sheet_sync_attempts?: number;
-          google_sheet_next_retry_at?: string | null;
           approved_overtime_minutes?: number | null;
           admin_note?: string | null;
           created_at?: string;

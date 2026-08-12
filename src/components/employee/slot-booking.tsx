@@ -1,39 +1,61 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { cancelBreakBooking, reserveBreakSlot } from "@/actions/bookings";
-import { formatOfficeDateTime } from "@/lib/time/timezone";
+import {
+  formatOfficeDateTime,
+  normalizeTimezone,
+} from "@/lib/time/timezone";
 import type { BreakBooking, OfficeSettings } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Badge, Card } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/field";
 import { useRouter } from "next/navigation";
 
-function defaultStartValue() {
-  const date = new Date(Date.now() + 30 * 60_000);
-  date.setMinutes(Math.ceil(date.getMinutes() / 15) * 15, 0, 0);
-  return date.toISOString().slice(0, 16);
-}
-
 export function SlotBooking({
   initialBookings,
   settings,
+  initialStartValue,
+  initialMinValue,
 }: {
   initialBookings: BreakBooking[];
   settings: OfficeSettings;
+  initialStartValue: string;
+  initialMinValue: string;
 }) {
   const router = useRouter();
-  const [start, setStart] = useState(defaultStartValue);
+  const safeTimezone = normalizeTimezone(settings.timezone);
+  const [start, setStart] = useState(initialStartValue);
   const [minutes, setMinutes] = useState(settings.default_break_minutes);
+  const [bookings, setBookings] = useState(initialBookings);
   const [pending, startTransition] = useTransition();
+  const minStart = initialMinValue;
+
+  useEffect(() => {
+    setBookings(initialBookings);
+  }, [initialBookings]);
 
   function onReserve() {
     startTransition(async () => {
       const result = await reserveBreakSlot(start, minutes);
       if (!result.success) {
+        if (result.error === "__BOOKINGS_DISABLED__") {
+          router.refresh();
+          return;
+        }
         toast.error(result.error);
         return;
+      }
+      if (result.data) {
+        setBookings((current) => {
+          const next = current.filter((item) => item.id !== result.data?.id);
+          return [result.data!, ...next].sort(
+            (a, b) =>
+              new Date(a.scheduled_start).getTime() -
+              new Date(b.scheduled_start).getTime()
+          );
+        });
       }
       toast.success(result.message ?? "Slot reserved.");
       router.refresh();
@@ -44,9 +66,14 @@ export function SlotBooking({
     startTransition(async () => {
       const result = await cancelBreakBooking(id);
       if (!result.success) {
+        if (result.error === "__BOOKINGS_DISABLED__") {
+          router.refresh();
+          return;
+        }
         toast.error(result.error);
         return;
       }
+      setBookings((current) => current.filter((booking) => booking.id !== id));
       toast.success(result.message ?? "Booking cancelled.");
       router.refresh();
     });
@@ -73,6 +100,7 @@ export function SlotBooking({
             id="slot-start"
             type="datetime-local"
             value={start}
+            min={minStart}
             onChange={(event) => setStart(event.target.value)}
           />
         </div>
@@ -93,20 +121,20 @@ export function SlotBooking({
       </div>
 
       <div className="mt-6 space-y-3">
-        {initialBookings.length === 0 ? (
+        {bookings.length === 0 ? (
           <p className="text-sm text-[var(--ink-muted)]">No upcoming slots.</p>
         ) : (
-          initialBookings.map((booking) => (
+          bookings.map((booking) => (
             <div
               key={booking.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-white px-4 py-3"
             >
               <div>
                 <p className="font-medium">
-                  {formatOfficeDateTime(booking.scheduled_start, settings.timezone)}
+                  {formatOfficeDateTime(booking.scheduled_start, safeTimezone)}
                 </p>
                 <p className="text-sm text-[var(--ink-muted)]">
-                  Until {formatOfficeDateTime(booking.scheduled_end, settings.timezone)}
+                  Until {formatOfficeDateTime(booking.scheduled_end, safeTimezone)}
                 </p>
               </div>
               <div className="flex items-center gap-2">

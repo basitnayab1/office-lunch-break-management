@@ -22,6 +22,16 @@ type AutomationSummary = {
   sheetRetries: number;
 };
 
+function isMissingSchemaError(error: { code?: string; message?: string } | null) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return (
+    error?.code === "PGRST204" ||
+    error?.code === "PGRST205" ||
+    error?.code === "42P01" ||
+    message.includes("schema cache")
+  );
+}
+
 function minutesUntil(targetIso: string, nowMs: number) {
   return Math.ceil((new Date(targetIso).getTime() - nowMs) / 60_000);
 }
@@ -112,7 +122,7 @@ export async function runOperationalAutomation(): Promise<{
         nowIso,
         session.allowed_minutes
       );
-      const { data: ended } = await service
+      let autoEndUpdate = await service
         .from("break_sessions")
         .update({
           ended_at: nowIso,
@@ -120,7 +130,7 @@ export async function runOperationalAutomation(): Promise<{
           actual_seconds: metrics.actual_seconds,
           extra_minutes: metrics.extra_minutes,
           extra_seconds: metrics.extra_seconds,
-          status: "auto_ended",
+          status: metrics.extra_seconds > 0 ? "exceeded" : "within_limit",
           google_sheet_sync_status: "pending",
           google_sheet_error: null,
         })
@@ -128,6 +138,23 @@ export async function runOperationalAutomation(): Promise<{
         .eq("status", "active")
         .select("*")
         .maybeSingle();
+      if (isMissingSchemaError(autoEndUpdate.error)) {
+        autoEndUpdate = await service
+          .from("break_sessions")
+          .update({
+            ended_at: nowIso,
+            actual_minutes: metrics.actual_minutes,
+            actual_seconds: metrics.actual_seconds,
+            extra_minutes: metrics.extra_minutes,
+            extra_seconds: metrics.extra_seconds,
+            status: metrics.extra_seconds > 0 ? "exceeded" : "within_limit",
+          })
+          .eq("id", session.id)
+          .eq("status", "active")
+          .select("*")
+          .maybeSingle();
+      }
+      const { data: ended } = autoEndUpdate;
 
       if (ended) {
         await createEmployeeNotificationOnce({
@@ -153,14 +180,14 @@ export async function runOperationalAutomation(): Promise<{
   }
 
   const reminderWindowEnd = new Date(nowMs + 10 * 60_000).toISOString();
-  const { data: bookings } = await service
+  const { data: bookings, error: bookingsError } = await service
     .from("break_bookings")
     .select("*, employee:employees(*)")
     .eq("status", "scheduled")
     .gte("scheduled_start", nowIso)
     .lte("scheduled_start", reminderWindowEnd);
 
-  for (const booking of ((bookings ?? []) as BreakBooking[])) {
+  for (const booking of ((bookingsError ? [] : bookings ?? []) as BreakBooking[])) {
     await createEmployeeNotificationOnce({
       recipientId: booking.employee_id,
       kind: "booking_reminder",
@@ -172,13 +199,13 @@ export async function runOperationalAutomation(): Promise<{
     summary.bookingReminders += 1;
   }
 
-  const { data: missed } = await service
+  const { data: missed, error: missedError } = await service
     .from("break_bookings")
     .select("*")
     .in("status", ["scheduled", "waiting"])
     .lt("scheduled_end", nowIso);
 
-  for (const booking of ((missed ?? []) as BreakBooking[])) {
+  for (const booking of ((missedError ? [] : missed ?? []) as BreakBooking[])) {
     await service
       .from("break_bookings")
       .update({ status: "missed" })
@@ -194,15 +221,14 @@ export async function runOperationalAutomation(): Promise<{
     summary.missedBookings += 1;
   }
 
-  const { data: failedSyncs } = await service
+  const failedSyncsQuery = await service
     .from("break_sessions")
-    .select("id, google_sheet_sync_attempts")
+    .select("id")
     .in("google_sheet_sync_status", ["failed", "pending"])
     .neq("status", "active")
-    .or(`google_sheet_next_retry_at.is.null,google_sheet_next_retry_at.lte.${nowIso}`)
     .limit(20);
 
-  for (const row of failedSyncs ?? []) {
+  for (const row of failedSyncsQuery.error ? [] : failedSyncsQuery.data ?? []) {
     const result = await syncBreakToGoogleSheets(row.id);
     if (result.success) summary.sheetRetries += 1;
   }

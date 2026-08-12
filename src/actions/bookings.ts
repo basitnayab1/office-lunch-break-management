@@ -14,6 +14,17 @@ import { getOfficeSettings } from "@/actions/settings";
 import type { BreakBooking } from "@/types/database";
 
 const SLOT_CAPACITY = 1;
+const BOOKINGS_DISABLED = "__BOOKINGS_DISABLED__";
+
+function isMissingBookingsTable(error: { code?: string; message?: string } | null) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return (
+    error?.code === "PGRST205" ||
+    error?.code === "42P01" ||
+    (message.includes("schema cache") && message.includes("break_bookings")) ||
+    message.includes('relation "public.break_bookings" does not exist')
+  );
+}
 
 function normalizeDateInput(value: string, timezone: string) {
   const iso = officeDateTimeInputToUtcIso(value, timezone);
@@ -24,31 +35,66 @@ function normalizeDateInput(value: string, timezone: string) {
   return fallback;
 }
 
+function currentMinuteStart() {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return now.getTime();
+}
+
 async function nextPositionForSlot(startIso: string, endIso: string) {
   const service = createServiceClient();
-  const { count } = await service
+  const { count, error } = await service
     .from("break_bookings")
     .select("*", { count: "exact", head: true })
     .eq("scheduled_start", startIso)
     .eq("scheduled_end", endIso)
     .in("status", ["scheduled", "waiting"]);
 
+  if (error) {
+    if (isMissingBookingsTable(error)) {
+      throw new Error(BOOKINGS_DISABLED);
+    }
+    throw new Error(error.message);
+  }
+
   return count ?? 0;
 }
 
 export async function getMyUpcomingBookings(): Promise<BreakBooking[]> {
   const employee = await requireEmployee();
-  const supabase = await createClient();
-  const { data } = await supabase
+  const service = createServiceClient();
+  const { data, error } = await service
     .from("break_bookings")
     .select("*")
     .eq("employee_id", employee.id)
     .in("status", ["scheduled", "waiting"])
-    .gte("scheduled_end", new Date().toISOString())
     .order("scheduled_start", { ascending: true })
     .limit(5);
 
+  if (error) {
+    if (!isMissingBookingsTable(error)) {
+      console.error("[getMyUpcomingBookings]", error);
+    }
+    return [];
+  }
+
   return (data ?? []) as BreakBooking[];
+}
+
+export async function isBreakBookingAvailable(): Promise<boolean> {
+  try {
+    await requireEmployee();
+  } catch {
+    return false;
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("break_bookings")
+    .select("id", { count: "exact", head: true })
+    .limit(1);
+
+  return !error;
 }
 
 export async function getUpcomingBookings(): Promise<BreakBooking[]> {
@@ -58,13 +104,20 @@ export async function getUpcomingBookings(): Promise<BreakBooking[]> {
     return [];
   }
 
-  const supabase = await createClient();
-  const { data } = await supabase
+  const service = createServiceClient();
+  const { data, error } = await service
     .from("break_bookings")
     .select("*, employee:employees(*)")
     .gte("scheduled_end", new Date().toISOString())
     .order("scheduled_start", { ascending: true })
     .limit(100);
+
+  if (error) {
+    if (!isMissingBookingsTable(error)) {
+      console.error("[getUpcomingBookings]", error);
+    }
+    return [];
+  }
 
   return (data ?? []) as BreakBooking[];
 }
@@ -81,7 +134,7 @@ export async function reserveBreakSlot(
 
   const duration = Math.max(5, Math.min(180, Number(minutes) || 60));
   const end = new Date(start.getTime() + duration * 60_000);
-  if (start.getTime() < Date.now() + 60_000) {
+  if (start.getTime() < currentMinuteStart()) {
     return { success: false, error: "Please choose a future slot." };
   }
 
@@ -89,7 +142,7 @@ export async function reserveBreakSlot(
   const endIso = end.toISOString();
   const service = createServiceClient();
 
-  const { data: duplicate } = await service
+  const { data: duplicate, error: duplicateError } = await service
     .from("break_bookings")
     .select("id")
     .eq("employee_id", employee.id)
@@ -98,11 +151,26 @@ export async function reserveBreakSlot(
     .in("status", ["scheduled", "waiting"])
     .maybeSingle();
 
+  if (isMissingBookingsTable(duplicateError)) {
+    return { success: false, error: BOOKINGS_DISABLED };
+  }
+  if (duplicateError) {
+    return { success: false, error: duplicateError.message };
+  }
+
   if (duplicate) {
     return { success: false, error: "You already reserved this slot." };
   }
 
-  const position = await nextPositionForSlot(startIso, endIso);
+  let position = 0;
+  try {
+    position = await nextPositionForSlot(startIso, endIso);
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : BOOKINGS_DISABLED,
+    };
+  }
   const status = position < SLOT_CAPACITY ? "scheduled" : "waiting";
 
   const { data, error } = await service
@@ -119,7 +187,13 @@ export async function reserveBreakSlot(
 
   if (error) {
     console.error("reserveBreakSlot", error);
-    return { success: false, error: "Unable to reserve this slot." };
+    if (isMissingBookingsTable(error)) {
+      return { success: false, error: BOOKINGS_DISABLED };
+    }
+    return {
+      success: false,
+      error: error.message || "Unable to reserve this slot.",
+    };
   }
 
   await createEmployeeNotification({
@@ -172,7 +246,7 @@ export async function cancelBreakBooking(
     return { success: false, error: "Booking not found." };
   }
 
-  await service
+  const { error: cancelError } = await service
     .from("break_bookings")
     .update({
       status: "cancelled",
@@ -180,6 +254,15 @@ export async function cancelBreakBooking(
       cancellation_reason: reason,
     })
     .eq("id", bookingId);
+
+  if (cancelError) {
+    return {
+      success: false,
+      error: isMissingBookingsTable(cancelError)
+        ? BOOKINGS_DISABLED
+        : cancelError.message,
+    };
+  }
 
   await promoteNextWaitingBooking(booking.scheduled_start, booking.scheduled_end);
   await logAudit({
@@ -258,9 +341,20 @@ export async function adminCreateBreakBooking(input: {
 
   const duration = Math.max(5, Math.min(180, Number(input.minutes) || 60));
   const end = new Date(start.getTime() + duration * 60_000);
+  if (start.getTime() < currentMinuteStart()) {
+    return { success: false, error: "Please choose a future slot." };
+  }
   const startIso = start.toISOString();
   const endIso = end.toISOString();
-  const position = await nextPositionForSlot(startIso, endIso);
+  let position = 0;
+  try {
+    position = await nextPositionForSlot(startIso, endIso);
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : BOOKINGS_DISABLED,
+    };
+  }
   const status = position < SLOT_CAPACITY ? "scheduled" : "waiting";
   const service = createServiceClient();
 
@@ -278,7 +372,12 @@ export async function adminCreateBreakBooking(input: {
     .single();
 
   if (error || !data) {
-    return { success: false, error: "Unable to create booking." };
+    return {
+      success: false,
+      error: error && isMissingBookingsTable(error)
+        ? BOOKINGS_DISABLED
+        : error?.message || "Unable to create booking.",
+    };
   }
 
   await createEmployeeNotification({

@@ -65,7 +65,7 @@ function normalizeEmployee(
     allowed_break_minutes: row.allowed_break_minutes ?? 60,
     role: row.role ?? "employee",
     is_active: row.is_active ?? false,
-    profile_image_url: row.profile_image_url ?? null,
+    avatar_url: row.avatar_url ?? null,
     joining_date: row.joining_date ?? null,
     break_access_blocked_until: row.break_access_blocked_until ?? null,
     break_access_block_reason: row.break_access_block_reason ?? null,
@@ -553,7 +553,7 @@ export async function updateMyAdminProfile(
     const imageFile = profileImageFile instanceof File ? profileImageFile : null;
     const uploaded = await uploadProfileImage(service, admin.id, imageFile);
     if (!uploaded.success) return uploaded;
-    const imageUrl = uploaded.data ?? admin.profile_image_url ?? null;
+    const imageUrl = uploaded.data ?? admin.avatar_url ?? null;
 
     const { data: before } = await service
       .from("employees")
@@ -579,12 +579,12 @@ export async function updateMyAdminProfile(
     await service.auth.admin.updateUserById(admin.id, {
       user_metadata: {
         full_name: fullName,
-        profile_image_url: imageUrl,
+        avatar_url: imageUrl,
       },
     });
 
     const normalized = normalizeEmployee(data as Partial<Employee>, {
-      profile_image_url: imageUrl,
+      avatar_url: imageUrl,
     });
 
     await logAudit({
@@ -638,7 +638,7 @@ export async function updateMyEmployeeProfile(
     const imageFile = profileImageFile instanceof File ? profileImageFile : null;
     const uploaded = await uploadProfileImage(service, employee.id, imageFile);
     if (!uploaded.success) return uploaded;
-    const imageUrl = uploaded.data ?? employee.profile_image_url ?? null;
+    const imageUrl = uploaded.data ?? employee.avatar_url ?? null;
 
     const { data: before } = await service
       .from("employees")
@@ -664,12 +664,12 @@ export async function updateMyEmployeeProfile(
     await service.auth.admin.updateUserById(employee.id, {
       user_metadata: {
         full_name: fullName,
-        profile_image_url: imageUrl,
+        avatar_url: imageUrl,
       },
     });
 
     const normalized = normalizeEmployee(data as Partial<Employee>, {
-      profile_image_url: imageUrl,
+      avatar_url: imageUrl,
     });
 
     await logAudit({

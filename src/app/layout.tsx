@@ -77,18 +77,27 @@ export default function RootLayout({
               (function () {
                 try {
                   if (!/^(localhost|127\\.0\\.0\\.1)$/.test(location.hostname)) return;
-                  if (sessionStorage.getItem('bite-station-pwa-cleaned') === '1') return;
-                  sessionStorage.setItem('bite-station-pwa-cleaned', '1');
+                  var flag = 'bite-station-local-cache-reset-v2';
+                  if (sessionStorage.getItem(flag) === '1') return;
+                  sessionStorage.setItem(flag, '1');
+                  var tasks = [];
                   if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.getRegistrations()
-                      .then(function (regs) { return Promise.all(regs.map(function (reg) { return reg.unregister(); })); })
-                      .catch(function () {});
+                    tasks.push(
+                      navigator.serviceWorker.getRegistrations()
+                        .then(function (regs) { return Promise.all(regs.map(function (reg) { return reg.unregister(); })); })
+                        .catch(function () {})
+                    );
                   }
                   if ('caches' in window) {
-                    caches.keys()
-                      .then(function (keys) { return Promise.all(keys.map(function (key) { return caches.delete(key); })); })
-                      .catch(function () {});
+                    tasks.push(
+                      caches.keys()
+                        .then(function (keys) { return Promise.all(keys.map(function (key) { return caches.delete(key); })); })
+                        .catch(function () {})
+                    );
                   }
+                  Promise.all(tasks).finally(function () {
+                    window.location.reload();
+                  });
                 } catch (e) {}
               })();
             `,

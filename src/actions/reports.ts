@@ -127,7 +127,7 @@ export async function getTodayStats(): Promise<TodayStats> {
   const completedBreaks = completed.length;
   const employeesOverTime = new Set(
     completed
-      .filter((b) => b.status === "exceeded" || b.status === "overtime")
+      .filter((b) => b.status === "exceeded")
       .map((b) => b.employee_id)
   ).size;
   const totalExtraMinutes = completed.reduce(
@@ -261,7 +261,7 @@ export async function getBreakHistory(filters: {
     query = query.eq("status", filters.status);
   }
   if (filters.exceededOnly) {
-      query = query.in("status", ["exceeded", "overtime"]);
+    query = query.eq("status", "exceeded");
   }
 
   const { data } = await query;
@@ -393,7 +393,7 @@ export async function getMonthlyReport(
     row.breakCount += 1;
     row.totalBreakMinutes += Number(b.actual_minutes) || 0;
     row.totalOvertimeMinutes += Number(b.extra_minutes) || 0;
-    if (b.status === "exceeded" || b.status === "overtime") row.exceededCount += 1;
+    if (b.status === "exceeded") row.exceededCount += 1;
     if (b.break_type === "breakfast") {
       row.breakfastCount += 1;
       row.breakfastMinutes += Number(b.actual_minutes) || 0;

@@ -28,10 +28,18 @@ export function LoginHeroDeferred() {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      setEnabled(true);
+      return;
+    }
     const mq = window.matchMedia("(min-width: 768px)");
     const sync = () => setEnabled(mq.matches);
     sync();
-    mq.addEventListener("change", sync);
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", sync);
+    } else if (typeof mq.addListener === "function") {
+      mq.addListener(sync);
+    }
     return () => mq.removeEventListener("change", sync);
   }, []);
 

@@ -90,7 +90,7 @@ async function main() {
       allowed_break_minutes: number;
       role: "employee" | "admin";
       is_active: boolean;
-      profile_image_url?: string | null;
+      avatar_url?: string | null;
       joining_date?: string | null;
       break_access_blocked_until?: string | null;
       break_access_block_reason?: string | null;
@@ -110,7 +110,7 @@ async function main() {
           ...employee,
           designation: employee.designation ?? "",
           shift: employee.shift ?? "General",
-          profile_image_url: employee.profile_image_url ?? null,
+          avatar_url: employee.avatar_url ?? null,
           joining_date: employee.joining_date ?? null,
           break_access_blocked_until: employee.break_access_blocked_until ?? null,
           break_access_block_reason: employee.break_access_block_reason ?? null,

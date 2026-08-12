@@ -39,7 +39,7 @@ export default async function AdminPanelLayout({
     <AdminShell
       officeName={settings.office_name}
       adminName={admin.full_name}
-      adminProfileImageUrl={admin.profile_image_url}
+      adminProfileImageUrl={admin.avatar_url}
       timezone={settings.timezone}
       initialNotifications={notifications}
     >

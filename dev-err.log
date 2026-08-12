@@ -1,0 +1,351 @@
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (107kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (258kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+[pin-rate-limit] unable to record login attempt: Could not find the table 'public.login_attempts' in the schema cache
+[audit] insert failed: Could not find the table 'public.audit_logs' in the schema cache
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json',
+  page: '/dashboard'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json',
+  page: '/dashboard'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json',
+  page: '/dashboard'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json',
+  page: '/dashboard'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\cache\webpack\client-development-fallback\0.pack.gz_' -> 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\cache\webpack\client-development-fallback\0.pack.gz'
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json',
+  page: '/dashboard'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json',
+  page: '/dashboard'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json',
+  page: '/dashboard'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json',
+  page: '/dashboard'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json',
+  page: '/dashboard'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json',
+  page: '/dashboard'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\ART\Desktop\screen_recording_sharing_app-main\office-lunch-break-management\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\ART\\Desktop\\screen_recording_sharing_app-main\\office-lunch-break-management\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]

@@ -3,8 +3,19 @@ import { format } from "date-fns";
 
 export const DEFAULT_TIMEZONE = "Asia/Karachi";
 
+export function normalizeTimezone(timezone: string | null | undefined): string {
+  const candidate = timezone?.trim();
+  if (!candidate) return DEFAULT_TIMEZONE;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: candidate }).format(new Date());
+    return candidate;
+  } catch {
+    return DEFAULT_TIMEZONE;
+  }
+}
+
 export function getOfficeDate(isoUtc: string | Date, timezone: string): string {
-  return formatInTimeZone(isoUtc, timezone, "yyyy-MM-dd");
+  return formatInTimeZone(isoUtc, normalizeTimezone(timezone), "yyyy-MM-dd");
 }
 
 export function formatOfficeTime(
@@ -12,14 +23,14 @@ export function formatOfficeTime(
   timezone: string,
   pattern = "h:mm a"
 ): string {
-  return formatInTimeZone(isoUtc, timezone, pattern);
+  return formatInTimeZone(isoUtc, normalizeTimezone(timezone), pattern);
 }
 
 export function formatOfficeDateTime(
   isoUtc: string | Date,
   timezone: string
 ): string {
-  return formatInTimeZone(isoUtc, timezone, "MMM d, yyyy h:mm a");
+  return formatInTimeZone(isoUtc, normalizeTimezone(timezone), "MMM d, yyyy h:mm a");
 }
 
 export function officeDateTimeInputToUtcIso(
@@ -28,13 +39,13 @@ export function officeDateTimeInputToUtcIso(
 ): string | null {
   if (!value) return null;
   const normalized = value.length === 16 ? `${value}:00` : value;
-  const utcDate = fromZonedTime(normalized, timezone);
+  const utcDate = fromZonedTime(normalized, normalizeTimezone(timezone));
   if (Number.isNaN(utcDate.getTime())) return null;
   return utcDate.toISOString();
 }
 
 export function todayInTimezone(timezone: string): string {
-  return formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
+  return formatInTimeZone(new Date(), normalizeTimezone(timezone), "yyyy-MM-dd");
 }
 
 export function monthRangeInTimezone(timezone: string, year: number, month: number) {

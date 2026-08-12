@@ -11,8 +11,12 @@ import type { Employee } from "@/types/database";
 export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const initialEmail = employee.email?.endsWith("@office.local")
+    ? ""
+    : employee.email ?? "";
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(employee.full_name ?? "Employee");
+  const [email, setEmail] = useState(initialEmail);
   const [imageUrl, setImageUrl] = useState(employee.avatar_url ?? "");
   const [fileName, setFileName] = useState("");
   const [pinForm, setPinForm] = useState({
@@ -58,6 +62,7 @@ export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
     event.preventDefault();
     const formData = new FormData();
     formData.set("full_name", name);
+    formData.set("email", email);
     const file = fileRef.current?.files?.[0];
     if (file) formData.set("profile_image_file", file);
 
@@ -68,6 +73,9 @@ export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
         return;
       }
       setName(result.data.full_name);
+      setEmail(
+        result.data.email?.endsWith("@office.local") ? "" : result.data.email ?? ""
+      );
       setImageUrl(result.data.avatar_url ?? "");
       setFileName("");
       if (fileRef.current) fileRef.current.value = "";
@@ -156,6 +164,18 @@ export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
                 <input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
+                  className="mt-1 h-10 w-full rounded-[8px] border border-[var(--line)] px-3 text-sm outline-none focus:border-[var(--brand)]"
+                  required
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--ink-muted)]">
+                  Email
+                </span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                   className="mt-1 h-10 w-full rounded-[8px] border border-[var(--line)] px-3 text-sm outline-none focus:border-[var(--brand)]"
                   required
                 />

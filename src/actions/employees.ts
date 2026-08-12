@@ -627,10 +627,14 @@ export async function updateMyEmployeeProfile(
   }
 
   const fullName = String(input.get("full_name") ?? "").trim();
+  const email = String(input.get("email") ?? "").trim().toLowerCase();
   const profileImageFile = input.get("profile_image_file");
 
   if (fullName.length < 2) {
     return { success: false, error: "Profile name must be at least 2 characters." };
+  }
+  if (!email || !email.includes("@")) {
+    return { success: false, error: "Please enter a valid real email address." };
   }
 
   try {
@@ -648,7 +652,7 @@ export async function updateMyEmployeeProfile(
 
     const { data, error } = await service
       .from("employees")
-      .update({ full_name: fullName })
+      .update({ full_name: fullName, email })
       .eq("id", employee.id)
       .select(employeeSelect())
       .single();
@@ -661,12 +665,27 @@ export async function updateMyEmployeeProfile(
       return { success: false, error: message };
     }
 
-    await service.auth.admin.updateUserById(employee.id, {
+    const { error: authUpdateError } = await service.auth.admin.updateUserById(employee.id, {
+      email,
+      email_confirm: true,
       user_metadata: {
         full_name: fullName,
         avatar_url: imageUrl,
       },
     });
+    if (authUpdateError) {
+      console.error("[updateMyEmployeeProfile] auth update failed:", authUpdateError);
+      const previousEmail =
+        (before as Partial<Employee> | null)?.email ?? employee.email;
+      await service
+        .from("employees")
+        .update({ email: previousEmail })
+        .eq("id", employee.id);
+      return {
+        success: false,
+        error: `Unable to update login email: ${authUpdateError.message}`,
+      };
+    }
 
     const normalized = normalizeEmployee(data as Partial<Employee>, {
       avatar_url: imageUrl,

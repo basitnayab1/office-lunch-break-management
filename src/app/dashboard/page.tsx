@@ -59,9 +59,13 @@ export default async function EmployeeDashboardPage() {
     "yyyy-MM-dd'T'HH:mm"
   );
 
-  const employeeSubtitle = `${employee.designation || employee.department} • ${
-    employee.email ?? employee.employee_id
-  }`;
+  const displayEmail =
+    employee.email && !employee.email.endsWith("@office.local")
+      ? employee.email
+      : employee.employee_id;
+  const employeeSubtitle = `${
+    employee.designation || employee.department
+  } • ${displayEmail}`;
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f8fbfa] text-[var(--ink)]">

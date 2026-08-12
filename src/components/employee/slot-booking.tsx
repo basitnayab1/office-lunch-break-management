@@ -38,44 +38,54 @@ export function SlotBooking({
 
   function onReserve() {
     startTransition(async () => {
-      const result = await reserveBreakSlot(start, minutes);
-      if (!result.success) {
-        if (result.error === "__BOOKINGS_DISABLED__") {
-          router.refresh();
+      try {
+        const result = await reserveBreakSlot(start, minutes);
+        if (!result.success) {
+          if (result.error === "__BOOKINGS_DISABLED__") {
+            router.refresh();
+            return;
+          }
+          toast.error(result.error);
           return;
         }
-        toast.error(result.error);
-        return;
+        if (result.data) {
+          setBookings((current) => {
+            const next = current.filter((item) => item.id !== result.data?.id);
+            return [result.data!, ...next].sort(
+              (a, b) =>
+                new Date(a.scheduled_start).getTime() -
+                new Date(b.scheduled_start).getTime()
+            );
+          });
+        }
+        toast.success(result.message ?? "Slot reserved.");
+        router.refresh();
+      } catch (error) {
+        toast.error("An unexpected error occurred while reserving the slot.");
+        console.error(error);
       }
-      if (result.data) {
-        setBookings((current) => {
-          const next = current.filter((item) => item.id !== result.data?.id);
-          return [result.data!, ...next].sort(
-            (a, b) =>
-              new Date(a.scheduled_start).getTime() -
-              new Date(b.scheduled_start).getTime()
-          );
-        });
-      }
-      toast.success(result.message ?? "Slot reserved.");
-      router.refresh();
     });
   }
 
   function onCancel(id: string) {
     startTransition(async () => {
-      const result = await cancelBreakBooking(id);
-      if (!result.success) {
-        if (result.error === "__BOOKINGS_DISABLED__") {
-          router.refresh();
+      try {
+        const result = await cancelBreakBooking(id);
+        if (!result.success) {
+          if (result.error === "__BOOKINGS_DISABLED__") {
+            router.refresh();
+            return;
+          }
+          toast.error(result.error);
           return;
         }
-        toast.error(result.error);
-        return;
+        setBookings((current) => current.filter((booking) => booking.id !== id));
+        toast.success(result.message ?? "Booking cancelled.");
+        router.refresh();
+      } catch (error) {
+        toast.error("An unexpected error occurred while cancelling.");
+        console.error(error);
       }
-      setBookings((current) => current.filter((booking) => booking.id !== id));
-      toast.success(result.message ?? "Booking cancelled.");
-      router.refresh();
     });
   }
 

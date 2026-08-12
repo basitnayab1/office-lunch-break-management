@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { logout } from "@/actions/auth";
+import { changeMyPassword, logout } from "@/actions/auth";
 import {
   markAllNotificationsRead,
   markNotificationRead,
@@ -170,12 +170,16 @@ export function AdminShell({
   const [profileName, setProfileName] = useState(adminName);
   const [profileImageUrl, setProfileImageUrl] = useState(adminProfileImageUrl ?? "");
   const [profileDraftName, setProfileDraftName] = useState(adminName);
-  const [profileDraftImageUrl, setProfileDraftImageUrl] = useState(
-    adminProfileImageUrl ?? ""
-  );
   const [profileDraftFileName, setProfileDraftFileName] = useState("");
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [now, setNow] = useState(() => new Date());
   const firstName = profileName.split(" ")[0] || "Admin";
@@ -286,7 +290,6 @@ export function AdminShell({
   useEffect(() => {
     const imageUrl = adminProfileImageUrl ?? "";
     setProfileImageUrl(imageUrl);
-    setProfileDraftImageUrl(imageUrl);
   }, [adminProfileImageUrl]);
 
   function readNotification(id: string) {
@@ -355,7 +358,6 @@ export function AdminShell({
     setProfileMessage(null);
     const formData = new FormData();
     formData.set("full_name", profileDraftName);
-    formData.set("profile_image_url", profileDraftImageUrl);
     const file = profileFileRef.current?.files?.[0];
     if (file) formData.set("profile_image_file", file);
 
@@ -368,11 +370,30 @@ export function AdminShell({
       setProfileName(result.data.full_name);
       setProfileImageUrl(result.data.profile_image_url ?? "");
       setProfileDraftName(result.data.full_name);
-      setProfileDraftImageUrl(result.data.profile_image_url ?? "");
       setProfileDraftFileName("");
       if (profileFileRef.current) profileFileRef.current.value = "";
       setProfileMessage(result.message ?? "Profile updated.");
       setProfileEditorOpen(false);
+    });
+  }
+
+  function savePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordError(null);
+    setPasswordMessage(null);
+
+    startTransition(async () => {
+      const result = await changeMyPassword(passwordForm);
+      if (!result.success) {
+        setPasswordError(result.error);
+        return;
+      }
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setPasswordMessage(result.message ?? "Password changed.");
     });
   }
 
@@ -416,9 +437,6 @@ export function AdminShell({
               </span>
               {!sidebarCollapsed ? currentOfficeName : null}
             </span>
-            {!sidebarCollapsed ? (
-              <Icon name="chevron" className="h-4 w-4 text-[var(--ink-muted)]" />
-            ) : null}
           </button>
 
           <nav className="flex flex-1 flex-col gap-1">
@@ -706,6 +724,8 @@ export function AdminShell({
                       setProfileOpen(false);
                       setProfileError(null);
                       setProfileMessage(null);
+                      setPasswordError(null);
+                      setPasswordMessage(null);
                     }}
                   >
                     <Icon name="users" className="h-4 w-4 text-[var(--ink-muted)]" />
@@ -740,6 +760,7 @@ export function AdminShell({
         {profileEditorOpen ? (
           <div className="fixed inset-0 z-40 grid place-items-center bg-black/30 px-4 py-6">
             <div className="w-full max-w-[420px] rounded-[12px] border border-[var(--line)] bg-white p-4 shadow-[0_24px_70px_rgba(20,32,51,0.24)]">
+              <div className="space-y-5">
               <form onSubmit={saveProfile} className="space-y-4">
                 <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
                   <div className="flex items-center gap-3">
@@ -770,19 +791,6 @@ export function AdminShell({
                       onChange={(event) => setProfileDraftName(event.target.value)}
                       className="mt-1 h-10 w-full rounded-[8px] border border-[var(--line)] px-3 text-sm outline-none focus:border-[var(--brand)]"
                       required
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="text-xs font-semibold text-[var(--ink-muted)]">
-                      Profile picture URL
-                    </span>
-                    <input
-                      value={profileDraftImageUrl}
-                      onChange={(event) =>
-                        setProfileDraftImageUrl(event.target.value)
-                      }
-                      placeholder="https://... or /image.png"
-                      className="mt-1 h-10 w-full rounded-[8px] border border-[var(--line)] px-3 text-sm outline-none focus:border-[var(--brand)]"
                     />
                   </label>
                   <label className="block">
@@ -829,7 +837,6 @@ export function AdminShell({
                     className="h-10 rounded-[8px] border border-[var(--line)] text-sm font-semibold text-[var(--ink)] transition hover:bg-[#f7f9fb]"
                     onClick={() => {
                       setProfileDraftName(profileName);
-                      setProfileDraftImageUrl(profileImageUrl);
                       setProfileDraftFileName("");
                       if (profileFileRef.current) profileFileRef.current.value = "";
                       setProfileError(null);
@@ -840,6 +847,76 @@ export function AdminShell({
                   </button>
                 </div>
               </form>
+              <form
+                onSubmit={savePassword}
+                className="space-y-3 border-t border-[var(--line)] pt-4"
+              >
+                <div>
+                  <p className="font-semibold">Change password</p>
+                  <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                    Use your current admin password before saving a new one.
+                  </p>
+                </div>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={passwordForm.currentPassword}
+                  onChange={(event) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      currentPassword: event.target.value,
+                    })
+                  }
+                  placeholder="Current password"
+                  className="h-10 w-full rounded-[8px] border border-[var(--line)] px-3 text-sm outline-none focus:border-[var(--brand)]"
+                  required
+                />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={passwordForm.newPassword}
+                  onChange={(event) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      newPassword: event.target.value,
+                    })
+                  }
+                  placeholder="New password"
+                  className="h-10 w-full rounded-[8px] border border-[var(--line)] px-3 text-sm outline-none focus:border-[var(--brand)]"
+                  required
+                />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(event) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      confirmPassword: event.target.value,
+                    })
+                  }
+                  placeholder="Confirm new password"
+                  className="h-10 w-full rounded-[8px] border border-[var(--line)] px-3 text-sm outline-none focus:border-[var(--brand)]"
+                  required
+                />
+                {passwordError ? (
+                  <p className="text-xs font-semibold text-[var(--danger)]">
+                    {passwordError}
+                  </p>
+                ) : null}
+                {passwordMessage ? (
+                  <p className="text-xs font-semibold text-[var(--ok)]">
+                    {passwordMessage}
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  className="h-10 w-full rounded-[8px] bg-[var(--ink)] text-sm font-semibold text-white transition hover:bg-black"
+                >
+                  Change password
+                </button>
+              </form>
+              </div>
             </div>
           </div>
         ) : null}

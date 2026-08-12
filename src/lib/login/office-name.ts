@@ -26,5 +26,5 @@ export const getCachedOfficeName = unstable_cache(
     }
   },
   ["public-office-name"],
-  { revalidate: 120, tags: ["office-settings"] }
+  { revalidate: 1, tags: ["office-settings"] }
 );

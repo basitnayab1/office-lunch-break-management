@@ -163,10 +163,12 @@ export async function updateOfficeSettings(input: {
       };
     }
 
+    revalidatePath("/admin", "layout");
     revalidatePath("/admin");
     revalidatePath("/admin/settings");
     revalidatePath("/admin/sheets");
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard", "page");
     revalidatePath("/");
     revalidatePath("/admin/login");
     revalidateTag("office-settings");

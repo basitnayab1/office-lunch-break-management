@@ -9,7 +9,7 @@ import {
   requireActiveEmployee,
   requireAdminSession,
 } from "@/lib/auth/guards";
-import { pinToAuthPassword } from "@/lib/auth/pin";
+import { isValidPin, pinToAuthPassword } from "@/lib/auth/pin";
 import { getPinLock, recordPinAttempt } from "@/lib/auth/rate-limit";
 import { logAudit } from "@/actions/audit";
 
@@ -205,6 +205,95 @@ export async function logout(): Promise<ActionResult> {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   return { success: true, message: "Signed out." };
+}
+
+export async function changeMyPassword(input: {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}): Promise<ActionResult> {
+  const session = await getSessionEmployee();
+  if (!session?.employee.email) {
+    return { success: false, error: "Login session not found." };
+  }
+
+  const currentPassword = input.currentPassword.trim();
+  const newPassword = input.newPassword.trim();
+  const confirmPassword = input.confirmPassword.trim();
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return { success: false, error: "Current and new password are required." };
+  }
+  if (newPassword !== confirmPassword) {
+    return { success: false, error: "New password confirmation does not match." };
+  }
+
+  const supabase = await createClient();
+  const employee = session.employee;
+
+  if (employee.role === "employee") {
+    if (!isValidPin(currentPassword) || !isValidPin(newPassword)) {
+      return { success: false, error: "Employee PIN must be exactly 4 digits." };
+    }
+
+    const primary = await supabase.auth.signInWithPassword({
+      email: employee.email,
+      password: pinToAuthPassword(currentPassword),
+    });
+    if (primary.error) {
+      const legacy = await supabase.auth.signInWithPassword({
+        email: employee.email,
+        password: currentPassword,
+      });
+      if (legacy.error) {
+        return { success: false, error: "Current PIN is incorrect." };
+      }
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: pinToAuthPassword(newPassword),
+    });
+    if (error) {
+      return { success: false, error: `Unable to change PIN: ${error.message}` };
+    }
+
+    await logAudit({
+      actorId: employee.id,
+      actorType: "employee",
+      action: "employee_pin_changed",
+      targetType: "employee",
+      targetId: employee.id,
+      newData: { changed_by_self: true },
+    });
+    return { success: true, message: "PIN changed successfully." };
+  }
+
+  if (newPassword.length < 6) {
+    return { success: false, error: "New password must be at least 6 characters." };
+  }
+
+  const verified = await supabase.auth.signInWithPassword({
+    email: employee.email,
+    password: currentPassword,
+  });
+  if (verified.error) {
+    return { success: false, error: "Current password is incorrect." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    return { success: false, error: `Unable to change password: ${error.message}` };
+  }
+
+  await logAudit({
+    actorId: employee.id,
+    actorType: "admin",
+    action: "admin_password_changed",
+    targetType: "employee",
+    targetId: employee.id,
+    newData: { changed_by_self: true },
+  });
+  return { success: true, message: "Password changed successfully." };
 }
 
 export async function getCurrentEmployee(): Promise<Employee | null> {

@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { requireAdmin, type ActionResult } from "@/actions/auth";
+import { requireAdmin, requireEmployee, type ActionResult } from "@/actions/auth";
 import { generateTemporaryPin, isValidPin, pinToAuthPassword, isLikelyLeakedPasswordError } from "@/lib/auth/pin";
 import { revalidatePath } from "next/cache";
 import type { Employee, UserRole } from "@/types/database";
@@ -467,9 +467,58 @@ export async function updateEmployee(
 
 type AdminProfileInput = {
   full_name: string;
-  profile_image_url?: string | null;
   profile_image_file?: File | null;
 };
+
+async function uploadProfileImage(
+  service: ReturnType<typeof createServiceClient>,
+  userId: string,
+  file: File | null
+): Promise<ActionResult<string | null>> {
+  if (!file || file.size <= 0) return { success: true, data: null };
+
+  if (!file.type.startsWith("image/")) {
+    return { success: false, error: "Profile picture must be an image file." };
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    return { success: false, error: "Profile picture must be 2 MB or smaller." };
+  }
+
+  const bucket = "profile-images";
+  const { error: bucketError } = await service.storage.createBucket(bucket, {
+    public: true,
+  });
+  if (
+    bucketError &&
+    !bucketError.message.toLowerCase().includes("already exists")
+  ) {
+    console.error("[uploadProfileImage] bucket create failed:", bucketError);
+    return { success: false, error: bucketError.message };
+  }
+
+  const extension =
+    file.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLowerCase() ||
+    "png";
+  const objectPath = `${userId}/${Date.now()}.${extension}`;
+  const { error: uploadError } = await service.storage
+    .from(bucket)
+    .upload(objectPath, file, {
+      cacheControl: "3600",
+      upsert: true,
+      contentType: file.type,
+    });
+
+  if (uploadError) {
+    const alreadyExists = uploadError.message.toLowerCase().includes("already exists");
+    if (!alreadyExists) {
+      console.error("[uploadProfileImage] image upload failed:", uploadError);
+      return { success: false, error: uploadError.message };
+    }
+  }
+
+  const { data: publicUrl } = service.storage.from(bucket).getPublicUrl(objectPath);
+  return { success: true, data: publicUrl.publicUrl };
+}
 
 export async function updateMyAdminProfile(
   input: AdminProfileInput | FormData
@@ -490,10 +539,6 @@ export async function updateMyAdminProfile(
     input instanceof FormData
       ? String(input.get("full_name") ?? "").trim()
       : input.full_name.trim();
-  let imageUrl =
-    input instanceof FormData
-      ? String(input.get("profile_image_url") ?? "").trim() || null
-      : input.profile_image_url?.trim() || null;
   const profileImageFile =
     input instanceof FormData
       ? input.get("profile_image_file")
@@ -503,67 +548,12 @@ export async function updateMyAdminProfile(
     return { success: false, error: "Profile name must be at least 2 characters." };
   }
 
-  if (
-    imageUrl &&
-    !imageUrl.startsWith("/") &&
-    !/^https?:\/\/.+/i.test(imageUrl)
-  ) {
-    return {
-      success: false,
-      error: "Profile picture must be a valid http(s) URL or a local / path.",
-    };
-  }
-
   try {
     const service = createServiceClient();
     const imageFile = profileImageFile instanceof File ? profileImageFile : null;
-    if (imageFile && imageFile.size > 0) {
-      if (!imageFile.type.startsWith("image/")) {
-        return { success: false, error: "Profile picture must be an image file." };
-      }
-      if (imageFile.size > 2 * 1024 * 1024) {
-        return { success: false, error: "Profile picture must be 2 MB or smaller." };
-      }
-
-      const bucket = "profile-images";
-      const { error: bucketError } = await service.storage.createBucket(bucket, {
-        public: true,
-      });
-      if (
-        bucketError &&
-        !bucketError.message.toLowerCase().includes("already exists")
-      ) {
-        console.error("[updateMyAdminProfile] bucket create failed:", bucketError);
-        return { success: false, error: bucketError.message };
-      }
-
-      const extension =
-        imageFile.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLowerCase() ||
-        "png";
-      const objectPath = `${admin.id}/${Date.now()}.${extension}`;
-      const { error: uploadError } = await service.storage
-        .from(bucket)
-        .upload(objectPath, imageFile, {
-          cacheControl: "3600",
-          upsert: true,
-          contentType: imageFile.type,
-        });
-
-      if (uploadError) {
-        const alreadyExists = uploadError.message
-          .toLowerCase()
-          .includes("already exists");
-        if (!alreadyExists) {
-          console.error("[updateMyAdminProfile] image upload failed:", uploadError);
-          return { success: false, error: uploadError.message };
-        }
-      }
-
-      const { data: publicUrl } = service.storage
-        .from(bucket)
-        .getPublicUrl(objectPath);
-      imageUrl = publicUrl.publicUrl;
-    }
+    const uploaded = await uploadProfileImage(service, admin.id, imageFile);
+    if (!uploaded.success) return uploaded;
+    const imageUrl = uploaded.data ?? admin.profile_image_url ?? null;
 
     const { data: before } = await service
       .from("employees")
@@ -571,26 +561,12 @@ export async function updateMyAdminProfile(
       .eq("id", admin.id)
       .maybeSingle();
 
-    let updated = await service
+    const { data, error } = await service
       .from("employees")
-      .update({
-        full_name: fullName,
-        profile_image_url: imageUrl,
-      })
+      .update({ full_name: fullName })
       .eq("id", admin.id)
       .select(employeeSelect())
       .single();
-
-    if (updated.error?.code === "42703") {
-      updated = await service
-        .from("employees")
-        .update({ full_name: fullName })
-        .eq("id", admin.id)
-        .select(employeeSelect())
-        .single();
-    }
-
-    const { data, error } = updated;
 
     if (error || !data) {
       const message = error
@@ -630,6 +606,90 @@ export async function updateMyAdminProfile(
     };
   } catch (error) {
     console.error("[updateMyAdminProfile] unexpected error:", error);
+    return {
+      success: false,
+      error: `Unable to update profile: ${formatUnknownError(error)}`,
+    };
+  }
+}
+
+export async function updateMyEmployeeProfile(
+  input: FormData
+): Promise<ActionResult<Employee>> {
+  let employee: Employee;
+  try {
+    employee = await requireEmployee();
+  } catch (error) {
+    return {
+      success: false,
+      error: isAuthAccessError(error) ? error.message : "Unauthorized.",
+    };
+  }
+
+  const fullName = String(input.get("full_name") ?? "").trim();
+  const profileImageFile = input.get("profile_image_file");
+
+  if (fullName.length < 2) {
+    return { success: false, error: "Profile name must be at least 2 characters." };
+  }
+
+  try {
+    const service = createServiceClient();
+    const imageFile = profileImageFile instanceof File ? profileImageFile : null;
+    const uploaded = await uploadProfileImage(service, employee.id, imageFile);
+    if (!uploaded.success) return uploaded;
+    const imageUrl = uploaded.data ?? employee.profile_image_url ?? null;
+
+    const { data: before } = await service
+      .from("employees")
+      .select(employeeSelect())
+      .eq("id", employee.id)
+      .maybeSingle();
+
+    const { data, error } = await service
+      .from("employees")
+      .update({ full_name: fullName })
+      .eq("id", employee.id)
+      .select(employeeSelect())
+      .single();
+
+    if (error || !data) {
+      const message = error
+        ? formatSupabaseError(error)
+        : "Profile update returned no row.";
+      console.error("[updateMyEmployeeProfile] failed:", message);
+      return { success: false, error: message };
+    }
+
+    await service.auth.admin.updateUserById(employee.id, {
+      user_metadata: {
+        full_name: fullName,
+        profile_image_url: imageUrl,
+      },
+    });
+
+    const normalized = normalizeEmployee(data as Partial<Employee>, {
+      profile_image_url: imageUrl,
+    });
+
+    await logAudit({
+      actorId: employee.id,
+      actorType: employee.role,
+      action: "employee_profile_updated",
+      targetType: "employee",
+      targetId: employee.id,
+      oldData: before ? normalizeEmployee(before as Partial<Employee>) : null,
+      newData: normalized,
+    });
+
+    revalidatePath("/dashboard");
+    return {
+      success: true,
+      data: normalized,
+      message: "Profile updated.",
+    };
+  } catch (error) {
+    console.error("[updateMyEmployeeProfile] unexpected error:", error);
     return {
       success: false,
       error: `Unable to update profile: ${formatUnknownError(error)}`,

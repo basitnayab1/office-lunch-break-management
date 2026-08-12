@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentEmployee, logout } from "@/actions/auth";
+import { getCurrentEmployee } from "@/actions/auth";
 import { getActiveBreak, getMyBreakHistory } from "@/actions/breaks";
 import { getMyUpcomingBookings } from "@/actions/bookings";
 import { getOfficeSettings } from "@/actions/settings";
@@ -8,8 +8,8 @@ import { BreakControl } from "@/components/employee/break-control";
 import { BreakHistoryList } from "@/components/employee/break-history";
 import { SlotBooking } from "@/components/employee/slot-booking";
 import { NotificationCenter } from "@/components/notifications/notification-center";
-import { Button } from "@/components/ui/button";
 import { BiteStationBrand } from "@/components/brand/bite-station-logo";
+import { EmployeeProfileMenu } from "@/components/employee/employee-profile-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -41,17 +41,7 @@ export default async function EmployeeDashboardPage() {
             {employee.department} · {employee.employee_id}
           </p>
         </div>
-        <form
-          action={async () => {
-            "use server";
-            await logout();
-            redirect("/");
-          }}
-        >
-          <Button type="submit" variant="secondary">
-            Sign out
-          </Button>
-        </form>
+        <EmployeeProfileMenu employee={employee} />
       </header>
 
       <div className="space-y-6">

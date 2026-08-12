@@ -12,7 +12,10 @@ export class AuthAccessError extends Error {
   }
 }
 
-function normalizeEmployee(row: Partial<Employee>): Employee {
+function normalizeEmployee(
+  row: Partial<Employee>,
+  overrides: Partial<Employee> = {}
+): Employee {
   return {
     id: row.id ?? "",
     employee_id: row.employee_id ?? "",
@@ -30,6 +33,7 @@ function normalizeEmployee(row: Partial<Employee>): Employee {
     break_access_block_reason: row.break_access_block_reason ?? null,
     created_at: row.created_at ?? new Date().toISOString(),
     updated_at: row.updated_at ?? new Date().toISOString(),
+    ...overrides,
   };
 }
 
@@ -62,7 +66,12 @@ export const getSessionEmployee = cache(
     if (!employee) return null;
     return {
       userId: user.id,
-      employee: normalizeEmployee(employee as Partial<Employee>),
+      employee: normalizeEmployee(employee as Partial<Employee>, {
+        profile_image_url:
+          typeof user.user_metadata?.profile_image_url === "string"
+            ? user.user_metadata.profile_image_url
+            : null,
+      }),
     };
   }
 );

@@ -1,14 +1,17 @@
 import { getOfficeSettings } from "@/actions/settings";
-import { SettingsForm } from "@/components/admin/settings-form";
-import {
-  getGoogleSheetId,
-  isGoogleSheetsConfigured,
-} from "@/lib/google-sheets/service";
+import { getGoogleSheetId } from "@/lib/google-sheets/service";
+import { redirect } from "next/navigation";
+import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
 export default async function GoogleSheetsPage() {
   const settings = await getOfficeSettings();
+  const sheetId = getGoogleSheetId(settings.google_sheet_id);
+
+  if (sheetId) {
+    redirect(`https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}/edit`);
+  }
 
   return (
     <div className="space-y-6">
@@ -17,19 +20,18 @@ export default async function GoogleSheetsPage() {
           Google Sheets
         </h2>
         <p className="mt-2 text-[var(--ink-muted)]">
-          Configure spreadsheet sync, test the connection, and retry failed
-          records. Credentials stay in server environment variables only.
+          Google Sheet ID is not configured yet.
         </p>
       </div>
-      <SettingsForm
-        settings={settings}
-        sheetsConfigured={isGoogleSheetsConfigured(settings.google_sheet_id)}
-        envSheetId={getGoogleSheetId(settings.google_sheet_id)}
-        serviceAccountEmail={
-          process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() || null
-        }
-        sheetsOnly
-      />
+      <Card className="max-w-2xl p-6">
+        <h3 className="font-[family-name:var(--font-display)] text-xl font-semibold">
+          Sheet not found
+        </h3>
+        <p className="mt-2 text-sm text-[var(--ink-muted)]">
+          Add `GOOGLE_SHEET_ID` in environment variables or save an override in
+          Settings, then this page will open the real spreadsheet directly.
+        </p>
+      </Card>
     </div>
   );
 }

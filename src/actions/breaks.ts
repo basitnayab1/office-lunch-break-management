@@ -25,6 +25,16 @@ import { logAudit } from "@/actions/audit";
 import { revalidatePath } from "next/cache";
 import type { BreakSession, OfficeSettings } from "@/types/database";
 
+function formatActionError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Unknown error";
+  }
+}
+
 async function getSettings(): Promise<OfficeSettings> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -103,11 +113,15 @@ async function validateBreakStartRules({
     return `Breaks are allowed during office hours (${settings.office_start_time.slice(0, 5)}-${settings.office_end_time.slice(0, 5)}).`;
   }
 
-  const { data: rpcRows } = await service.rpc("validate_break_start", {
+  const { data: rpcRows, error: rpcError } = await service.rpc("validate_break_start", {
     p_employee_id: employee.id,
     p_break_date: breakDate,
     p_now: startedAt,
   });
+  if (rpcError && rpcError.code !== "42883") {
+    console.error("[validate_break_start RPC]", rpcError);
+    return rpcError.message || "Break validation failed.";
+  }
   const rpcResult = Array.isArray(rpcRows) ? rpcRows[0] : null;
   if (rpcResult && !rpcResult.ok) {
     return rpcResult.message || "Break cannot be started right now.";
@@ -291,7 +305,10 @@ export async function startBreak(
         return { success: false, error: "Your break has already started." };
       }
       console.error("startBreak error", error);
-      return { success: false, error: "Unable to start break. Please try again." };
+      return {
+        success: false,
+        error: error.message || "Unable to start break. Please try again.",
+      };
     }
 
     await createEmployeeNotification({
@@ -318,8 +335,10 @@ export async function startBreak(
       data,
       message: `${breakTypeLabel(breakType)} break started.`,
     };
-  } catch {
-    return { success: false, error: "Unable to start break. Please try again." };
+  } catch (error) {
+    const message = formatActionError(error);
+    console.error("[startBreak] unexpected", message, error);
+    return { success: false, error: `Unable to start break: ${message}` };
   }
 }
 

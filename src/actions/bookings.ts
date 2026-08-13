@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireEmployee, type ActionResult } from "@/actions/auth";
-import { createEmployeeNotification } from "@/actions/notifications";
 import { logAudit } from "@/actions/audit";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
@@ -89,10 +88,10 @@ export async function isBreakBookingAvailable(): Promise<boolean> {
   }
 
   const service = createServiceClient();
-  const { error } = await service
-    .from("break_bookings")
-    .select("id", { count: "exact", head: true })
-    .limit(1);
+  // Real GET (not HEAD): missing tables return PGRST205 with a body.
+  // HEAD against a missing table has no body, so supabase-js reports error=null
+  // and the Reserve UI would show even when insert cannot succeed.
+  const { error } = await service.from("break_bookings").select("id").limit(1);
 
   if (!error) return true;
   if (!isMissingBookingsTable(error)) {
@@ -111,7 +110,7 @@ export async function getUpcomingBookings(): Promise<BreakBooking[]> {
   const service = createServiceClient();
   const { data, error } = await service
     .from("break_bookings")
-    .select("*, employee:employees(*)")
+    .select("*, employee:employees!employee_id(*)")
     .gte("scheduled_end", new Date().toISOString())
     .order("scheduled_start", { ascending: true })
     .limit(100);
@@ -200,17 +199,6 @@ export async function reserveBreakSlot(
     };
   }
 
-  await createEmployeeNotification({
-    recipientId: employee.id,
-    kind: status === "waiting" ? "booking_reminder" : "booking_reminder",
-    title: status === "waiting" ? "Added to waiting list" : "Break slot reserved",
-    body:
-      status === "waiting"
-        ? `This slot is full. You are #${position} on the waiting list.`
-        : "Your reserved break slot is scheduled.",
-    entityType: "break_booking",
-    entityId: data.id,
-  });
   await logAudit({
     actorId: employee.id,
     actorType: employee.role,
@@ -384,14 +372,6 @@ export async function adminCreateBreakBooking(input: {
     };
   }
 
-  await createEmployeeNotification({
-    recipientId: input.employeeId,
-    kind: "booking_reminder",
-    title: "Break slot created by admin",
-    body: input.reason.trim(),
-    entityType: "break_booking",
-    entityId: data.id,
-  });
   await logAudit({
     actorId: admin.id,
     actorType: "admin",
@@ -429,23 +409,6 @@ async function promoteNextWaitingBooking(startIso: string, endIso: string) {
     .from("break_bookings")
     .update({ status: "scheduled", position: 0 })
     .eq("id", next.id);
-
-  const { data: promoted } = await service
-    .from("break_bookings")
-    .select("employee_id")
-    .eq("id", next.id)
-    .maybeSingle();
-
-  if (promoted?.employee_id) {
-    await createEmployeeNotification({
-      recipientId: promoted.employee_id,
-      kind: "waiting_slot_promoted",
-      title: "Your waiting-list slot is available",
-      body: "You have been promoted from waiting list to scheduled.",
-      entityType: "break_booking",
-      entityId: next.id,
-    });
-  }
 
   await logAudit({
     actorType: "system",

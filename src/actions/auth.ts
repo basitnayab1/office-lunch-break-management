@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import type { Employee, EmployeeLoginOption } from "@/types/database";
+import type { Employee } from "@/types/database";
 import {
   getSessionEmployee,
   requireActiveEmployee,
@@ -17,25 +17,17 @@ export type ActionResult<T = undefined> =
   | { success: true; data?: T; message?: string }
   | { success: false; error: string };
 
-export async function listEmployeesForLogin(): Promise<
-  ActionResult<EmployeeLoginOption[]>
-> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("list_active_employees_for_login");
-
-  if (error) {
-    return { success: false, error: "Unable to load employees. Please try again." };
-  }
-
-  return { success: true, data: (data ?? []) as EmployeeLoginOption[] };
-}
+const INVALID_EMPLOYEE_CREDENTIALS = "Invalid Employee ID or PIN.";
 
 export async function loginWithPin(
-  employeeId: string,
-  pin: string
+  employeeIdInput: string,
+  pinInput: string
 ): Promise<ActionResult<{ role: string }>> {
+  const employeeId = employeeIdInput.trim();
+  const pin = pinInput.trim();
+
   if (!employeeId || !pin) {
-    return { success: false, error: "Please select your name and enter your PIN." };
+    return { success: false, error: "Employee ID and PIN are required." };
   }
 
   const lock = await getPinLock(employeeId);
@@ -50,7 +42,7 @@ export async function loginWithPin(
   const { data: employee, error } = await service
     .from("employees")
     .select("id, email, role, is_active, employee_id, full_name")
-    .eq("id", employeeId)
+    .eq("employee_id", employeeId)
     .maybeSingle();
 
   if (error || !employee) {
@@ -59,11 +51,17 @@ export async function loginWithPin(
       succeeded: false,
       reason: "employee_not_found",
     });
-    return { success: false, error: "Employee not found." };
+    return { success: false, error: INVALID_EMPLOYEE_CREDENTIALS };
   }
 
   if (!employee.is_active) {
-    return { success: false, error: "This account is inactive. Contact your admin." };
+    await recordPinAttempt({
+      identifier: employeeId,
+      employeeId: employee.id,
+      succeeded: false,
+      reason: "inactive",
+    });
+    return { success: false, error: INVALID_EMPLOYEE_CREDENTIALS };
   }
 
   if (employee.role === "admin") {
@@ -74,7 +72,13 @@ export async function loginWithPin(
   }
 
   if (!employee.email) {
-    return { success: false, error: "Account is not configured for login." };
+    await recordPinAttempt({
+      identifier: employeeId,
+      employeeId: employee.id,
+      succeeded: false,
+      reason: "not_configured",
+    });
+    return { success: false, error: INVALID_EMPLOYEE_CREDENTIALS };
   }
 
   const supabase = await createClient();
@@ -91,22 +95,13 @@ export async function loginWithPin(
     });
     if (legacy.error) {
       await recordPinAttempt({
-        identifier: employee.id,
+        identifier: employeeId,
         employeeId: employee.id,
         succeeded: false,
         reason: "invalid_pin",
       });
-      const postFailureLock = await getPinLock(employee.id);
+      const postFailureLock = await getPinLock(employeeId);
       if (postFailureLock.locked) {
-        await service.from("notifications").insert({
-          recipient_id: null,
-          audience: "admin",
-          kind: "suspicious_pin_attempt",
-          title: "PIN login locked",
-          body: `${employee.full_name} reached the failed PIN attempt limit.`,
-          entity_type: "employee",
-          entity_id: employee.id,
-        });
         await logAudit({
           actorId: employee.id,
           actorType: "employee",
@@ -116,12 +111,12 @@ export async function loginWithPin(
           newData: { reason: "failed_pin_limit" },
         });
       }
-      return { success: false, error: "Incorrect PIN. Please try again." };
+      return { success: false, error: INVALID_EMPLOYEE_CREDENTIALS };
     }
   }
 
   await recordPinAttempt({
-    identifier: employee.id,
+    identifier: employeeId,
     employeeId: employee.id,
     succeeded: true,
   });
@@ -295,6 +290,32 @@ export async function changeMyPassword(input: {
     newData: { changed_by_self: true },
   });
   return { success: true, message: "Password changed successfully." };
+}
+
+/**
+ * Records that the signed-in admin changed their own Auth password.
+ * The password update itself runs on the browser Supabase client so it
+ * uses the same session cookies as login. This action never receives
+ * passwords and never uses the service role.
+ */
+export async function recordAdminPasswordChanged(): Promise<ActionResult> {
+  let admin: Employee;
+  try {
+    admin = await requireAdmin();
+  } catch {
+    return { success: false, error: "Unauthorized. Admin access required." };
+  }
+
+  await logAudit({
+    actorId: admin.id,
+    actorType: "admin",
+    action: "admin_password_changed",
+    targetType: "employee",
+    targetId: admin.id,
+    newData: { changed_by_self: true },
+  });
+
+  return { success: true };
 }
 
 export async function getCurrentEmployee(): Promise<Employee | null> {

@@ -6,19 +6,6 @@ export type BreakStatus =
 export type SyncStatus = "pending" | "synced" | "failed" | "not_applicable";
 export type BreakType = "breakfast" | "coffee" | "lunch";
 export type BookingStatus = "scheduled" | "waiting" | "cancelled" | "completed" | "missed";
-export type NotificationAudience = "employee" | "admin";
-export type NotificationKind =
-  | "break_10_min_remaining"
-  | "break_5_min_remaining"
-  | "break_completed"
-  | "overtime_warning"
-  | "booking_reminder"
-  | "waiting_slot_promoted"
-  | "admin_overtime_alert"
-  | "google_sheets_failed"
-  | "coverage_low"
-  | "suspicious_pin_attempt"
-  | "system";
 
 export interface Employee {
   id: string;
@@ -102,19 +89,6 @@ export interface BreakBooking {
   created_at: string;
   updated_at: string;
   employee?: Employee | null;
-}
-
-export interface AppNotification {
-  id: string;
-  recipient_id: string | null;
-  audience: NotificationAudience;
-  kind: NotificationKind;
-  title: string;
-  body: string;
-  entity_type: string | null;
-  entity_id: string | null;
-  read_at: string | null;
-  created_at: string;
 }
 
 export interface AuditLog {
@@ -507,34 +481,6 @@ export interface Database {
           },
         ];
       };
-      notifications: {
-        Row: AppNotification;
-        Insert: {
-          id?: string;
-          recipient_id?: string | null;
-          audience?: NotificationAudience;
-          kind?: NotificationKind;
-          title: string;
-          body: string;
-          entity_type?: string | null;
-          entity_id?: string | null;
-          read_at?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          recipient_id?: string | null;
-          audience?: NotificationAudience;
-          kind?: NotificationKind;
-          title?: string;
-          body?: string;
-          entity_type?: string | null;
-          entity_id?: string | null;
-          read_at?: string | null;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
       audit_logs: {
         Row: AuditLog;
         Insert: {
@@ -595,8 +541,6 @@ export interface Database {
       sync_status: SyncStatus;
       break_type: BreakType;
       booking_status: BookingStatus;
-      notification_audience: NotificationAudience;
-      notification_kind: NotificationKind;
     };
     CompositeTypes: {
       [_ in never]: never;

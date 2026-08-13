@@ -3,10 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/actions/auth";
 import { logAudit } from "@/actions/audit";
-import {
-  createAdminNotificationOnce,
-  createEmployeeNotificationOnce,
-} from "@/actions/notifications";
 import { getOfficeSettings } from "@/actions/settings";
 import { syncBreakToGoogleSheets } from "@/actions/breaks";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -70,46 +66,7 @@ export async function runOperationalAutomation(): Promise<{
     ).toISOString();
     const remaining = minutesUntil(dueAt, nowMs);
 
-    if (remaining <= 10 && remaining > 5) {
-      await createEmployeeNotificationOnce({
-        recipientId: employee.id,
-        kind: "break_10_min_remaining",
-        title: "10 minutes remaining",
-        body: "Your break is nearing its allowed duration.",
-        entityType: "break_session",
-        entityId: session.id,
-      });
-      summary.breakReminders += 1;
-    }
-
-    if (remaining <= 5 && remaining >= 0) {
-      await createEmployeeNotificationOnce({
-        recipientId: employee.id,
-        kind: "break_5_min_remaining",
-        title: "5 minutes remaining",
-        body: "Please wrap up and return on time.",
-        entityType: "break_session",
-        entityId: session.id,
-      });
-      summary.breakReminders += 1;
-    }
-
     if (remaining < 0) {
-      await createEmployeeNotificationOnce({
-        recipientId: employee.id,
-        kind: "overtime_warning",
-        title: "Break overtime",
-        body: "Your break has passed the allowed duration.",
-        entityType: "break_session",
-        entityId: session.id,
-      });
-      await createAdminNotificationOnce({
-        kind: "admin_overtime_alert",
-        title: `${employee.full_name} is overtime`,
-        body: `${employee.department} break is past the allowed duration.`,
-        entityType: "break_session",
-        entityId: session.id,
-      });
       summary.overtimeAlerts += 1;
     }
 
@@ -157,14 +114,6 @@ export async function runOperationalAutomation(): Promise<{
       const { data: ended } = autoEndUpdate;
 
       if (ended) {
-        await createEmployeeNotificationOnce({
-          recipientId: employee.id,
-          kind: "break_completed",
-          title: "Break auto-ended",
-          body: "Your break was auto-ended after the grace period.",
-          entityType: "break_session",
-          entityId: session.id,
-        });
         await logAudit({
           actorType: "system",
           action: "break_auto_ended",
@@ -177,26 +126,6 @@ export async function runOperationalAutomation(): Promise<{
         summary.autoEnded += 1;
       }
     }
-  }
-
-  const reminderWindowEnd = new Date(nowMs + 10 * 60_000).toISOString();
-  const { data: bookings, error: bookingsError } = await service
-    .from("break_bookings")
-    .select("*, employee:employees(*)")
-    .eq("status", "scheduled")
-    .gte("scheduled_start", nowIso)
-    .lte("scheduled_start", reminderWindowEnd);
-
-  for (const booking of ((bookingsError ? [] : bookings ?? []) as BreakBooking[])) {
-    await createEmployeeNotificationOnce({
-      recipientId: booking.employee_id,
-      kind: "booking_reminder",
-      title: "Break slot starting soon",
-      body: "Your reserved break slot starts within 10 minutes.",
-      entityType: "break_booking",
-      entityId: booking.id,
-    });
-    summary.bookingReminders += 1;
   }
 
   const { data: missed, error: missedError } = await service

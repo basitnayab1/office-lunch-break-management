@@ -7,7 +7,6 @@ import {
   getServerNow,
   startBreak,
 } from "@/actions/breaks";
-import { createBreakReminderNotification } from "@/actions/notifications";
 import { calculateBreakMetrics } from "@/lib/breaks/calculations";
 import { getBreakAlarmPhase } from "@/lib/breaks/alarm-phase";
 import {
@@ -126,9 +125,6 @@ export function BreakControl({
 
   const warningNotifiedForId = useRef<string | null>(null);
   const exceededNotifiedForId = useRef<string | null>(null);
-  const overtimeStoredForId = useRef<string | null>(null);
-  const tenMinuteNotifiedForId = useRef<string | null>(null);
-  const fiveMinuteNotifiedForId = useRef<string | null>(null);
 
   const warningMinutes = settings.break_warning_minutes ?? 2;
   const safeTimezone = normalizeTimezone(settings.timezone);
@@ -242,54 +238,9 @@ export function BreakControl({
   ]);
 
   useEffect(() => {
-    if (!activeBreak?.id || !metrics) return;
-
-    if (
-      metrics.remainingSeconds <= 600 &&
-      metrics.remainingSeconds > 300 &&
-      tenMinuteNotifiedForId.current !== activeBreak.id
-    ) {
-      tenMinuteNotifiedForId.current = activeBreak.id;
-      void createBreakReminderNotification({
-        breakSessionId: activeBreak.id,
-        kind: "break_10_min_remaining",
-        title: "10 minutes remaining",
-        body: `Your ${breakTypeLabel(activeBreak.break_type)} break has 10 minutes left.`,
-      });
-    }
-
-    if (
-      metrics.remainingSeconds <= 300 &&
-      metrics.remainingSeconds > 0 &&
-      fiveMinuteNotifiedForId.current !== activeBreak.id
-    ) {
-      fiveMinuteNotifiedForId.current = activeBreak.id;
-      void createBreakReminderNotification({
-        breakSessionId: activeBreak.id,
-        kind: "break_5_min_remaining",
-        title: "5 minutes remaining",
-        body: `Your ${breakTypeLabel(activeBreak.break_type)} break has 5 minutes left.`,
-      });
-    }
-
-    if (metrics.isOvertime && overtimeStoredForId.current !== activeBreak.id) {
-      overtimeStoredForId.current = activeBreak.id;
-      void createBreakReminderNotification({
-        breakSessionId: activeBreak.id,
-        kind: "overtime_warning",
-        title: "Break time completed",
-        body: "Your allowed break time has ended. Overtime is being tracked.",
-      });
-    }
-  }, [activeBreak?.id, activeBreak?.break_type, metrics]);
-
-  useEffect(() => {
     if (!activeBreak) {
       warningNotifiedForId.current = null;
       exceededNotifiedForId.current = null;
-      overtimeStoredForId.current = null;
-      tenMinuteNotifiedForId.current = null;
-      fiveMinuteNotifiedForId.current = null;
       stopBreakAlarms();
     }
   }, [activeBreak]);
@@ -334,9 +285,6 @@ export function BreakControl({
       stopBreakAlarms();
       warningNotifiedForId.current = null;
       exceededNotifiedForId.current = null;
-      overtimeStoredForId.current = null;
-      tenMinuteNotifiedForId.current = null;
-      fiveMinuteNotifiedForId.current = null;
       setActiveBreak(result.data ?? null);
       setSelectedType(null);
       toast.success(result.message ?? "Break started.");
@@ -356,9 +304,6 @@ export function BreakControl({
       setActiveBreak(null);
       warningNotifiedForId.current = null;
       exceededNotifiedForId.current = null;
-      overtimeStoredForId.current = null;
-      tenMinuteNotifiedForId.current = null;
-      fiveMinuteNotifiedForId.current = null;
       stopBreakAlarms();
       toast.success(result.message ?? "Break ended successfully.");
       router.refresh();

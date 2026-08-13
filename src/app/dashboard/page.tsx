@@ -6,11 +6,9 @@ import {
   isBreakBookingAvailable,
 } from "@/actions/bookings";
 import { getOfficeSettings } from "@/actions/settings";
-import { getMyNotifications } from "@/actions/notifications";
 import { BreakControl } from "@/components/employee/break-control";
 import { BreakHistoryList } from "@/components/employee/break-history";
 import { SlotBooking } from "@/components/employee/slot-booking";
-import { NotificationCenter } from "@/components/notifications/notification-center";
 import { BiteStationBrand } from "@/components/brand/bite-station-logo";
 import { EmployeeProfileMenu } from "@/components/employee/employee-profile-menu";
 import { formatInTimeZone } from "date-fns-tz";
@@ -31,21 +29,14 @@ export default async function EmployeeDashboardPage() {
   if (!employee) redirect("/");
   if (employee.role === "admin") redirect("/admin");
 
-  const [
-    activeBreak,
-    history,
-    settings,
-    bookings,
-    bookingAvailable,
-    notifications,
-  ] = await Promise.all([
-    getActiveBreak(),
-    getMyBreakHistory(),
-    getOfficeSettings(),
-    getMyUpcomingBookings(),
-    isBreakBookingAvailable(),
-    getMyNotifications(),
-  ]);
+  const [activeBreak, history, settings, bookings, bookingAvailable] =
+    await Promise.all([
+      getActiveBreak(),
+      getMyBreakHistory(),
+      getOfficeSettings(),
+      getMyUpcomingBookings(),
+      isBreakBookingAvailable(),
+    ]);
 
   const safeTimezone = normalizeTimezone(settings.timezone);
   const bookingStartValue = formatInTimeZone(
@@ -184,12 +175,6 @@ export default async function EmployeeDashboardPage() {
           </div>
         </div>
       </section>
-
-      <NotificationCenter
-        employee={employee}
-        initialNotifications={notifications}
-        timezone={settings.timezone}
-      />
     </main>
   );
 }

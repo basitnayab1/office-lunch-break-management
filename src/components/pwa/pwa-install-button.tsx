@@ -9,6 +9,12 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
+declare global {
+  interface Window {
+    __biteStationDeferredInstall?: BeforeInstallPromptEvent;
+  }
+}
+
 function isIosDevice() {
   if (typeof window === "undefined") return false;
   const ua = window.navigator.userAgent;
@@ -26,9 +32,14 @@ function isStandaloneDisplay() {
   return media || iosStandalone;
 }
 
+function readCapturedPrompt() {
+  if (typeof window === "undefined") return null;
+  return window.__biteStationDeferredInstall ?? null;
+}
+
 /**
  * Shows Install App when beforeinstallprompt is available (Chrome/Edge/Android),
- * or iOS Add-to-Home-Screen instructions. Hidden when already installed / unsupported.
+ * or Add-to-Home-Screen / browser-menu instructions when it is not.
  */
 export function PwaInstallButton({
   className,
@@ -41,7 +52,7 @@ export function PwaInstallButton({
     null
   );
   const [installed, setInstalled] = useState(false);
-  const [showIosHelp, setShowIosHelp] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   const ios = useMemo(() => isIosDevice(), []);
@@ -52,15 +63,20 @@ export function PwaInstallButton({
       return;
     }
 
+    setDeferred(readCapturedPrompt());
+
     const onBeforeInstall = (event: Event) => {
       event.preventDefault();
-      setDeferred(event as BeforeInstallPromptEvent);
+      const promptEvent = event as BeforeInstallPromptEvent;
+      window.__biteStationDeferredInstall = promptEvent;
+      setDeferred(promptEvent);
     };
 
     const onInstalled = () => {
       setInstalled(true);
       setDeferred(null);
-      setShowIosHelp(false);
+      setShowHelp(false);
+      window.__biteStationDeferredInstall = undefined;
     };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
@@ -73,6 +89,35 @@ export function PwaInstallButton({
   }, []);
 
   if (installed || dismissed) return null;
+
+  const helpCopy = ios
+    ? "Tap Share, then Add to Home Screen."
+    : "In Chrome or Edge, open the browser menu and choose Install app / Install Bite Station. On iPhone or iPad, use Share → Add to Home Screen.";
+
+  const helpPanel = (
+    <div className="max-w-xs rounded-2xl border border-[var(--line)] bg-[var(--bg-elevated)] p-4 text-left shadow-[var(--shadow)]">
+      <p className="text-sm font-semibold text-[var(--ink)]">Install App</p>
+      <p className="mt-2 text-sm text-[var(--ink-muted)]">{helpCopy}</p>
+      <div className="mt-3 flex gap-2">
+        <Button
+          type="button"
+          size="md"
+          variant="secondary"
+          onClick={() => setShowHelp(false)}
+        >
+          Close
+        </Button>
+        <Button
+          type="button"
+          size="md"
+          variant="ghost"
+          onClick={() => setDismissed(true)}
+        >
+          Dismiss
+        </Button>
+      </div>
+    </div>
+  );
 
   // Chrome / Edge / Android Chromium
   if (deferred) {
@@ -92,8 +137,10 @@ export function PwaInstallButton({
               }
             } catch (err) {
               console.warn("[PWA] install prompt failed:", err);
+              setShowHelp(true);
             } finally {
               setDeferred(null);
+              window.__biteStationDeferredInstall = undefined;
             }
           }}
         >
@@ -103,52 +150,22 @@ export function PwaInstallButton({
     );
   }
 
-  // iOS Safari — cannot trigger native install prompt
-  if (ios) {
-    return (
-      <div className={cn("pointer-events-auto", className)}>
-        {!showIosHelp ? (
-          <Button
-            type="button"
-            variant="secondary"
-            size={compact ? "md" : "lg"}
-            onClick={() => setShowIosHelp(true)}
-          >
-            Install App
-          </Button>
-        ) : (
-          <div className="max-w-xs rounded-2xl border border-[var(--line)] bg-[var(--bg-elevated)] p-4 text-left shadow-[var(--shadow)]">
-            <p className="text-sm font-semibold text-[var(--ink)]">
-              Install App
-            </p>
-            <p className="mt-2 text-sm text-[var(--ink-muted)]">
-              Tap <strong>Share</strong> → <strong>Add to Home Screen</strong>
-            </p>
-            <div className="mt-3 flex gap-2">
-              <Button
-                type="button"
-                size="md"
-                variant="secondary"
-                onClick={() => setShowIosHelp(false)}
-              >
-                Close
-              </Button>
-              <Button
-                type="button"
-                size="md"
-                variant="ghost"
-                onClick={() => setDismissed(true)}
-              >
-                Dismiss
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <div className={cn("pointer-events-auto", className)}>
+      {!showHelp ? (
+        <Button
+          type="button"
+          variant="secondary"
+          size={compact ? "md" : "lg"}
+          onClick={() => setShowHelp(true)}
+        >
+          Install App
+        </Button>
+      ) : (
+        helpPanel
+      )}
+    </div>
+  );
 }
 
 /** Fixed corner host so install is available without redesigning pages. */

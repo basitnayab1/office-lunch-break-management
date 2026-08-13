@@ -17,11 +17,62 @@ import { Badge, Card } from "@/components/ui/card";
 const emptyForm = {
   full_name: "",
   employee_id: "",
+  email: "",
   department: "General",
   pin: "",
+  password: "",
+  confirmPassword: "",
   role: "employee" as "employee" | "admin",
   is_active: true,
 };
+
+function PasswordInput({
+  id,
+  label,
+  autoComplete,
+  value,
+  onChange,
+  visible,
+  onToggleVisible,
+  minLength,
+  required,
+}: {
+  id: string;
+  label: string;
+  autoComplete: "new-password";
+  value: string;
+  onChange: (value: string) => void;
+  visible: boolean;
+  onToggleVisible: () => void;
+  minLength: number;
+  required: boolean;
+}) {
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative">
+        <Input
+          id={id}
+          type={visible ? "text" : "password"}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          required={required}
+          minLength={minLength}
+          className="pr-12"
+        />
+        <button
+          type="button"
+          onClick={onToggleVisible}
+          className="absolute inset-y-0 right-0 px-3 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
+          aria-label={visible ? `Hide ${label}` : `Show ${label}`}
+        >
+          {visible ? "Hide" : "Show"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 type PinReveal = {
   title: string;
@@ -45,6 +96,8 @@ export function EmployeeManager({
   const [pinReveal, setPinReveal] = useState<PinReveal | null>(null);
   const [pending, startTransition] = useTransition();
   const [search, setSearch] = useState(initialSearch);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">(
     "all"
@@ -91,12 +144,45 @@ export function EmployeeManager({
 
   function onCreate(e: React.FormEvent) {
     e.preventDefault();
+    const isAdmin = form.role === "admin";
+
+    if (!form.full_name.trim()) {
+      toast.error("Full name is required.");
+      return;
+    }
+    if (!isAdmin && !form.employee_id.trim()) {
+      toast.error("Name and Employee ID are required.");
+      return;
+    }
+    if (isAdmin) {
+      const email = form.email.trim().toLowerCase();
+      if (!email || !email.includes("@") || !email.includes(".")) {
+        toast.error("A valid email address is required.");
+        return;
+      }
+      if (!form.password) {
+        toast.error("Password is required.");
+        return;
+      }
+      if (form.password.length < 8) {
+        toast.error("Password must be at least 8 characters.");
+        return;
+      }
+      if (form.password !== form.confirmPassword) {
+        toast.error("Password and confirmation do not match.");
+        return;
+      }
+    }
+
     startTransition(async () => {
       const result = await createEmployee({
         full_name: form.full_name,
         employee_id: form.employee_id,
+        email: isAdmin ? form.email.trim().toLowerCase() : undefined,
         department: form.department,
-        pin: form.pin.trim() || undefined,
+        pin: isAdmin ? undefined : form.pin.trim() || undefined,
+        password: isAdmin ? form.password : undefined,
+        confirmPassword: isAdmin ? form.confirmPassword : undefined,
         role: form.role,
         is_active: form.is_active,
       });
@@ -104,28 +190,32 @@ export function EmployeeManager({
         const message = result.success
           ? "Unable to create employee."
           : result.error;
-        console.error("[EmployeeManager] create failed:", message, result);
+        console.error("[EmployeeManager] create failed:", message);
         toast.error(message);
         return;
       }
 
       const { employee, temporaryPin, pinWasGenerated } = result.data;
       setForm(emptyForm);
+      setShowPassword(false);
+      setShowConfirmPassword(false);
       setRows((prev) =>
         [...prev.filter((r) => r.id !== employee.id), employee].sort((a, b) =>
           a.full_name.localeCompare(b.full_name)
         )
       );
       toast.success(result.message ?? "Employee created successfully");
-      setPinReveal({
-        title: "Employee created successfully",
-        full_name: employee.full_name,
-        employee_id: employee.employee_id,
-        temporaryPin,
-        note: pinWasGenerated
-          ? "A secure 4-digit temporary PIN was generated automatically. Share it with the employee now — it will not be shown again."
-          : "Share this PIN with the employee now — it will not be shown again.",
-      });
+      if (employee.role !== "admin") {
+        setPinReveal({
+          title: "Employee created successfully",
+          full_name: employee.full_name,
+          employee_id: employee.employee_id,
+          temporaryPin,
+          note: pinWasGenerated
+            ? "A secure 4-digit temporary PIN was generated automatically. Share it with the employee now — it will not be shown again."
+            : "Share this PIN with the employee now — it will not be shown again.",
+        });
+      }
       router.refresh();
     });
   }
@@ -204,26 +294,84 @@ export function EmployeeManager({
           </h2>
           <form onSubmit={onCreate} className="mt-5 space-y-4">
             <div>
-              <Label>Full name</Label>
+              <Label htmlFor="add-role">Role</Label>
+              <Select
+                id="add-role"
+                value={form.role}
+                onChange={(e) => {
+                  const role = e.target.value as "employee" | "admin";
+                  setForm({
+                    ...form,
+                    role,
+                    pin: role === "admin" ? "" : form.pin,
+                    password: role === "employee" ? "" : form.password,
+                    confirmPassword:
+                      role === "employee" ? "" : form.confirmPassword,
+                    email: role === "employee" ? "" : form.email,
+                  });
+                  if (role === "employee") {
+                    setShowPassword(false);
+                    setShowConfirmPassword(false);
+                  }
+                }}
+              >
+                <option value="employee">Employee</option>
+                <option value="admin">Admin</option>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="add-full-name">Full name</Label>
               <Input
+                id="add-full-name"
                 value={form.full_name}
                 onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                 required
               />
             </div>
             <div>
-              <Label>Employee ID</Label>
+              <Label htmlFor="add-employee-id">
+                {form.role === "admin" ? "Employee ID (optional)" : "Employee ID"}
+              </Label>
               <Input
+                id="add-employee-id"
                 value={form.employee_id}
                 onChange={(e) =>
                   setForm({ ...form, employee_id: e.target.value })
                 }
-                required
+                required={form.role !== "admin"}
+                placeholder={
+                  form.role === "admin"
+                    ? "Leave blank to auto-generate"
+                    : undefined
+                }
               />
+              {form.role === "admin" ? (
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                  Required by the employee record. A unique ID is generated if
+                  left blank.
+                </p>
+              ) : null}
             </div>
+            {form.role === "admin" ? (
+              <div>
+                <Label htmlFor="add-admin-email">Email address</Label>
+                <Input
+                  id="add-admin-email"
+                  type="email"
+                  autoComplete="off"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  required
+                />
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                  Required. This admin will sign in with this email and password.
+                </p>
+              </div>
+            ) : null}
             <div>
-              <Label>Department</Label>
+              <Label htmlFor="add-department">Department</Label>
               <Input
+                id="add-department"
                 value={form.department}
                 onChange={(e) =>
                   setForm({ ...form, department: e.target.value })
@@ -231,43 +379,64 @@ export function EmployeeManager({
                 required
               />
             </div>
+            {form.role === "employee" ? (
+              <div>
+                <Label htmlFor="add-pin">PIN (optional)</Label>
+                <Input
+                  id="add-pin"
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={form.pin}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      pin: e.target.value.replace(/\D/g, "").slice(0, 4),
+                    })
+                  }
+                  placeholder="Leave blank to auto-generate"
+                />
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                  If empty, a secure 4-digit temporary PIN is generated.
+                </p>
+              </div>
+            ) : (
+              <>
+                <PasswordInput
+                  id="add-admin-password"
+                  label="Password"
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={(password) => setForm({ ...form, password })}
+                  visible={showPassword}
+                  onToggleVisible={() => setShowPassword((value) => !value)}
+                  minLength={8}
+                  required
+                />
+                <p className="-mt-2 text-xs text-[var(--ink-muted)]">
+                  Required. At least 8 characters. Stored only in Supabase Auth.
+                </p>
+                <PasswordInput
+                  id="add-admin-confirm-password"
+                  label="Confirm password"
+                  autoComplete="new-password"
+                  value={form.confirmPassword}
+                  onChange={(confirmPassword) =>
+                    setForm({ ...form, confirmPassword })
+                  }
+                  visible={showConfirmPassword}
+                  onToggleVisible={() =>
+                    setShowConfirmPassword((value) => !value)
+                  }
+                  minLength={8}
+                  required
+                />
+              </>
+            )}
             <div>
-              <Label>PIN (optional)</Label>
-              <Input
-                type="password"
-                inputMode="numeric"
-                maxLength={4}
-                value={form.pin}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    pin: e.target.value.replace(/\D/g, "").slice(0, 4),
-                  })
-                }
-                placeholder="Leave blank to auto-generate"
-              />
-              <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                If empty, a secure 4-digit temporary PIN is generated.
-              </p>
-            </div>
-            <div>
-              <Label>Role</Label>
+              <Label htmlFor="add-status">Status</Label>
               <Select
-                value={form.role}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    role: e.target.value as "employee" | "admin",
-                  })
-                }
-              >
-                <option value="employee">Employee</option>
-                <option value="admin">Admin</option>
-              </Select>
-            </div>
-            <div>
-              <Label>Status</Label>
-              <Select
+                id="add-status"
                 value={form.is_active ? "active" : "inactive"}
                 onChange={(e) =>
                   setForm({ ...form, is_active: e.target.value === "active" })
@@ -278,7 +447,11 @@ export function EmployeeManager({
               </Select>
             </div>
             <Button type="submit" className="w-full" disabled={pending}>
-              {pending ? "Saving..." : "Add employee"}
+              {pending
+                ? "Saving..."
+                : form.role === "admin"
+                  ? "Add admin"
+                  : "Add employee"}
             </Button>
           </form>
         </Card>

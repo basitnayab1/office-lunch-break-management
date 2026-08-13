@@ -31,8 +31,8 @@ export default async function EmployeesPage({
           Employee management
         </h2>
         <p className="mt-2 text-[var(--ink-muted)]">
-          Add, edit, activate/deactivate, search, and reset PINs. New active
-          employees appear immediately on the employee login dropdown.
+          Add, edit, activate/deactivate, search, and reset PINs. Employees
+          sign in with their Employee ID and PIN.
         </p>
       </div>
       <EmployeeManager employees={employees} initialSearch={initialSearch} />

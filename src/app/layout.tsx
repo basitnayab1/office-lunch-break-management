@@ -28,17 +28,17 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  applicationName: "//:ai",
+  applicationName: "Bite Station",
   title: {
-    default: "//:ai",
-    template: "%s · //:ai",
+    default: "Bite Station",
+    template: "%s · Bite Station",
   },
   description: "Smart breaks and workforce break management.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "//:ai",
+    title: "Bite Station",
   },
   formatDetection: {
     telephone: false,
@@ -69,6 +69,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <Script
+          id="capture-pwa-install-prompt"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                window.addEventListener('beforeinstallprompt', function (event) {
+                  event.preventDefault();
+                  window.__biteStationDeferredInstall = event;
+                });
+              })();
+            `,
+          }}
+        />
         <Script
           id="clear-local-pwa-cache"
           strategy="beforeInteractive"

@@ -5,24 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { loginWithPin } from "@/actions/auth";
-import type { EmployeeLoginOption } from "@/types/database";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Select } from "@/components/ui/field";
+import { Input, Label } from "@/components/ui/field";
 import { BiteStationLogo } from "@/components/brand/bite-station-logo";
 
-export function LoginForm({
-  officeName,
-  initialEmployees = [],
-}: {
-  officeName: string;
-  initialEmployees?: EmployeeLoginOption[];
-}) {
+export function LoginForm({ officeName }: { officeName: string }) {
   const router = useRouter();
-  const [employees] = useState<EmployeeLoginOption[]>(initialEmployees);
   const [employeeId, setEmployeeId] = useState("");
   const [pin, setPin] = useState("");
+  const [showPin, setShowPin] = useState(false);
   const [pending, startTransition] = useTransition();
-  const listReady = employees.length > 0;
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -52,50 +44,55 @@ export function LoginForm({
           Welcome Back
         </h1>
         <p className="mt-2 text-[var(--ink-muted)]">
-          Select your name and enter your PIN to manage your breaks.
+          Enter your Employee ID and PIN to manage your breaks.
         </p>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-5">
         <div>
-          <Label htmlFor="employee">Employee Name</Label>
-          <Select
-            id="employee"
+          <Label htmlFor="employee-id">Employee ID</Label>
+          <Input
+            id="employee-id"
+            name="employee-id"
+            autoComplete="username"
+            placeholder="Enter your Employee ID"
             value={employeeId}
             onChange={(e) => setEmployeeId(e.target.value)}
-            disabled={pending || !listReady}
-            required
-            className="h-12"
-          >
-            <option value="">
-              {listReady ? "Select employee" : "No employees available"}
-            </option>
-            {employees.map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.full_name} — {emp.department}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="pin">PIN</Label>
-          <Input
-            id="pin"
-            type="password"
-            inputMode="numeric"
-            autoComplete="current-password"
-            placeholder="Enter PIN"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
             disabled={pending}
             required
             className="h-12"
           />
         </div>
 
+        <div>
+          <Label htmlFor="pin">PIN</Label>
+          <div className="relative">
+            <Input
+              id="pin"
+              name="pin"
+              type={showPin ? "text" : "password"}
+              inputMode="numeric"
+              autoComplete="current-password"
+              placeholder="Enter your PIN"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              disabled={pending}
+              required
+              className="h-12 pr-16"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPin((value) => !value)}
+              className="absolute inset-y-0 right-0 px-3 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              aria-label={showPin ? "Hide PIN" : "Show PIN"}
+            >
+              {showPin ? "Hide" : "Show"}
+            </button>
+          </div>
+        </div>
+
         <Button type="submit" size="lg" className="h-12 w-full" disabled={pending}>
-          {pending ? "Signing in..." : "Sign In"}
+          {pending ? "Signing in..." : "Login"}
         </Button>
       </form>
 

@@ -4,15 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { changeMyPassword, logout } from "@/actions/auth";
-import {
-  markAllNotificationsRead,
-  markNotificationRead,
-} from "@/actions/notifications";
 import { updateMyAdminProfile } from "@/actions/employees";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { BiteStationBrand } from "@/components/brand/bite-station-logo";
-import type { AppNotification } from "@/types/database";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: "layout", exact: true },
@@ -20,7 +15,6 @@ const links = [
   { href: "/admin/employees", label: "Employees", icon: "users" },
   { href: "/admin/history", label: "Break Records", icon: "records" },
   { href: "/admin/reports", label: "Reports", icon: "chart" },
-  { href: "/admin/notifications", label: "Notifications", icon: "bell" },
   { href: "/admin/audit", label: "Audit Logs", icon: "shield" },
   { href: "/admin/settings", label: "Settings", icon: "settings" },
   { href: "/admin/sheets", label: "Google Sheets", icon: "sheet" },
@@ -32,15 +26,13 @@ type IconName =
   | "users"
   | "records"
   | "chart"
-  | "bell"
   | "shield"
   | "settings"
   | "sheet"
   | "menu"
   | "search"
   | "chevron"
-  | "clock"
-  | "check";
+  | "clock";
 
 function getSafeTimezone(timezone: string) {
   try {
@@ -97,12 +89,6 @@ function Icon({ name, className }: { name: IconName; className?: string }) {
         <path d="M7 15l4-4 3 3 5-7" />
       </>
     ),
-    bell: (
-      <>
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-      </>
-    ),
     shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />,
     settings: (
       <>
@@ -134,7 +120,6 @@ function Icon({ name, className }: { name: IconName; className?: string }) {
         <path d="M12 7v5l3 2" />
       </>
     ),
-    check: <path d="M20 6 9 17l-5-5" />,
   };
 
   return <svg {...common}>{paths[name]}</svg>;
@@ -146,14 +131,12 @@ export function AdminShell({
   adminName,
   adminProfileImageUrl,
   timezone,
-  initialNotifications,
 }: {
   children: React.ReactNode;
   officeName: string;
   adminName: string;
   adminProfileImageUrl: string | null;
   timezone: string;
-  initialNotifications: AppNotification[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -163,9 +146,7 @@ export function AdminShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [notifications, setNotifications] = useState(initialNotifications);
   const [currentOfficeName, setCurrentOfficeName] = useState(officeName);
   const [profileName, setProfileName] = useState(adminName ?? "Admin");
   const [profileImageUrl, setProfileImageUrl] = useState(adminProfileImageUrl ?? "");
@@ -197,10 +178,6 @@ export function AdminShell({
         ? "Good afternoon"
         : "Good evening";
   const safeTimezone = getSafeTimezone(timezone);
-  const unreadNotifications = useMemo(
-    () => notifications.filter((item) => !item.read_at).length,
-    [notifications]
-  );
   const officeDateLabel = new Intl.DateTimeFormat("en-US", {
     timeZone: safeTimezone,
     month: "short",
@@ -263,10 +240,6 @@ export function AdminShell({
   }, []);
 
   useEffect(() => {
-    setNotifications(initialNotifications);
-  }, [initialNotifications]);
-
-  useEffect(() => {
     setCurrentOfficeName(officeName);
   }, [officeName]);
 
@@ -293,31 +266,6 @@ export function AdminShell({
     const imageUrl = adminProfileImageUrl ?? "";
     setProfileImageUrl(imageUrl);
   }, [adminProfileImageUrl]);
-
-  function readNotification(id: string) {
-    startTransition(async () => {
-      const result = await markNotificationRead(id);
-      if (result.success) {
-        setNotifications((current) =>
-          current.map((item) =>
-            item.id === id ? { ...item, read_at: new Date().toISOString() } : item
-          )
-        );
-      }
-    });
-  }
-
-  function readAllNotifications() {
-    startTransition(async () => {
-      const result = await markAllNotificationsRead();
-      if (result.success) {
-        const readAt = new Date().toISOString();
-        setNotifications((current) =>
-          current.map((item) => ({ ...item, read_at: item.read_at ?? readAt }))
-        );
-      }
-    });
-  }
 
   function Avatar({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
     const sizes = {
@@ -536,7 +484,6 @@ export function AdminShell({
                 className="flex w-full items-center gap-3 text-left"
                 onClick={() => {
                   setCalendarOpen((open) => !open);
-                  setNotificationsOpen(false);
                   setProfileOpen(false);
                 }}
                 aria-expanded={calendarOpen}
@@ -603,99 +550,9 @@ export function AdminShell({
             </div>
             <div className="relative">
               <button
-                type="button"
-                className="relative grid h-12 w-12 place-items-center rounded-full border border-[var(--line)] bg-white text-[var(--ink)] shadow-[var(--shadow)] transition hover:bg-[#f7f9fb]"
-                onClick={() => {
-                  setNotificationsOpen((open) => !open);
-                  setCalendarOpen(false);
-                  setProfileOpen(false);
-                }}
-                aria-expanded={notificationsOpen}
-                aria-label="Open notifications"
-              >
-                <Icon name="bell" />
-                {unreadNotifications > 0 ? (
-                  <span className="absolute right-0 top-0 grid h-5 min-w-5 place-items-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-bold text-white">
-                    {unreadNotifications}
-                  </span>
-                ) : null}
-              </button>
-              {notificationsOpen ? (
-                <div className="absolute right-0 top-14 w-[min(380px,calc(100vw-32px))] overflow-hidden rounded-[12px] border border-[var(--line)] bg-white shadow-[0_18px_40px_rgba(20,32,51,0.14)]">
-                  <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
-                    <div>
-                      <p className="font-semibold">Notifications</p>
-                      <p className="text-xs text-[var(--ink-muted)]">
-                        {unreadNotifications} unread
-                      </p>
-                    </div>
-                    <button
-                      className="rounded-[8px] px-3 py-2 text-xs font-semibold text-[var(--brand)] transition hover:bg-[var(--brand-soft)] disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={readAllNotifications}
-                      disabled={unreadNotifications === 0}
-                    >
-                      Mark all read
-                    </button>
-                  </div>
-                  <div className="max-h-[360px] overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <p className="px-4 py-6 text-sm text-[var(--ink-muted)]">
-                        No notifications yet.
-                      </p>
-                    ) : (
-                      notifications.slice(0, 8).map((notification) => (
-                        <button
-                          key={notification.id}
-                          type="button"
-                          className={cn(
-                            "block w-full border-b border-[var(--line)] px-4 py-3 text-left transition hover:bg-[#f7f9fb]",
-                            !notification.read_at && "bg-[var(--brand-soft)]/55"
-                          )}
-                          onClick={() => readNotification(notification.id)}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <p className="font-semibold">{notification.title}</p>
-                            {notification.read_at ? (
-                              <Icon
-                                name="check"
-                                className="mt-0.5 h-4 w-4 text-[var(--ok)]"
-                              />
-                            ) : (
-                              <span className="mt-1 h-2.5 w-2.5 rounded-full bg-[var(--brand)]" />
-                            )}
-                          </div>
-                          <p className="mt-1 line-clamp-2 text-sm text-[var(--ink-muted)]">
-                            {notification.body}
-                          </p>
-                          <p className="mt-2 text-xs text-[var(--ink-muted)]">
-                            {new Intl.DateTimeFormat("en-US", {
-                              timeZone: safeTimezone,
-                              month: "short",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                            }).format(new Date(notification.created_at))}
-                          </p>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                  <Link
-                    href="/admin/notifications"
-                    className="flex h-11 items-center justify-center text-sm font-semibold text-[var(--brand)] transition hover:bg-[var(--brand-soft)]"
-                    onClick={() => setNotificationsOpen(false)}
-                  >
-                    View all notifications
-                  </Link>
-                </div>
-              ) : null}
-            </div>
-            <div className="relative">
-              <button
                 className="flex h-12 items-center gap-2 rounded-full bg-white pl-1 pr-3 text-sm font-bold text-[var(--ink)] shadow-[var(--shadow)] ring-1 ring-[var(--line)] transition hover:bg-[#f7f9fb]"
                 onClick={() => {
                   setProfileOpen((open) => !open);
-                  setNotificationsOpen(false);
                   setCalendarOpen(false);
                 }}
                 aria-expanded={profileOpen}

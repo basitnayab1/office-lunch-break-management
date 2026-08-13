@@ -16,10 +16,6 @@ import {
   isGoogleSheetsConfigured,
 } from "@/lib/google-sheets/service";
 import { requireAdmin, requireEmployee, type ActionResult } from "@/actions/auth";
-import {
-  createAdminNotification,
-  createEmployeeNotification,
-} from "@/actions/notifications";
 import { logAudit } from "@/actions/audit";
 import { revalidatePath } from "next/cache";
 import type { BreakSession, OfficeSettings } from "@/types/database";
@@ -338,14 +334,6 @@ export async function startBreak(
       };
     }
 
-    await createEmployeeNotification({
-      recipientId: employee.id,
-      kind: "system",
-      title: `${breakTypeLabel(breakType)} break started`,
-      body: `Your break is active for ${allowedMinutes} minutes.`,
-      entityType: "break_session",
-      entityId: data.id,
-    });
     await logAudit({
       actorId: employee.id,
       actorType: employee.role,
@@ -442,20 +430,6 @@ export async function endBreak(): Promise<ActionResult<BreakSession>> {
     // Sync to Google Sheets (non-blocking failure)
     await syncBreakToGoogleSheets(completed.id);
 
-    await createEmployeeNotification({
-      recipientId: employee.id,
-      kind: metrics.extra_seconds > 0 ? "overtime_warning" : "break_completed",
-      title:
-        metrics.extra_seconds > 0
-          ? "Break ended with overtime"
-          : "Break completed",
-      body:
-        metrics.extra_seconds > 0
-          ? `You exceeded by ${metrics.extra_minutes} minutes.`
-          : "You returned within the allowed time.",
-      entityType: "break_session",
-      entityId: completed.id,
-    });
     await logAudit({
       actorId: employee.id,
       actorType: employee.role,
@@ -465,16 +439,6 @@ export async function endBreak(): Promise<ActionResult<BreakSession>> {
       oldData: active as BreakSession,
       newData: completed as BreakSession,
     });
-
-    if (metrics.extra_seconds > 0) {
-      await createAdminNotification({
-        kind: "admin_overtime_alert",
-        title: `${employee.full_name} returned late`,
-        body: `${employee.department} overtime: ${metrics.extra_minutes} minute(s).`,
-        entityType: "break_session",
-        entityId: completed.id,
-      });
-    }
 
     revalidatePath("/dashboard");
     revalidatePath("/admin");
@@ -645,14 +609,6 @@ export async function syncBreakToGoogleSheets(
         .eq("id", breakSessionId);
     }
 
-    await createAdminNotification({
-      kind: "google_sheets_failed",
-      title: "Google Sheets sync failed",
-      body: message,
-      entityType: "break_session",
-      entityId: breakSessionId,
-    });
-
     return {
       success: false,
       error: message,
@@ -775,14 +731,6 @@ export async function adminEndEmployeeBreak(
     return { success: false, error: "Unable to end employee break." };
   }
 
-  await createEmployeeNotification({
-    recipientId: ended.employee_id,
-    kind: "break_completed",
-    title: "Break ended by admin",
-    body: reason.trim(),
-    entityType: "break_session",
-    entityId: breakSessionId,
-  });
   await logAudit({
     actorId: admin.id,
     actorType: "admin",
@@ -831,14 +779,6 @@ export async function adminExtendBreak(
     return { success: false, error: "Unable to extend break." };
   }
 
-  await createEmployeeNotification({
-    recipientId: updated.employee_id,
-    kind: "system",
-    title: `Break extended by ${minutes} minutes`,
-    body: reason.trim(),
-    entityType: "break_session",
-    entityId: breakSessionId,
-  });
   await logAudit({
     actorId: admin.id,
     actorType: "admin",
@@ -918,14 +858,6 @@ export async function adminSendBreakReminder(
 
   if (!active) return { success: false, error: "Active break not found." };
 
-  await createEmployeeNotification({
-    recipientId: active.employee_id,
-    kind: "system",
-    title: "Admin reminder",
-    body: reason.trim(),
-    entityType: "break_session",
-    entityId: breakSessionId,
-  });
   await logAudit({
     actorId: admin.id,
     actorType: "admin",
@@ -970,14 +902,6 @@ export async function adminTemporarilyBlockBreakAccess(
     return { success: false, error: "Unable to block break access." };
   }
 
-  await createEmployeeNotification({
-    recipientId: employeeId,
-    kind: "system",
-    title: "Break access temporarily blocked",
-    body: `${reason.trim()} Until ${blockedUntil}.`,
-    entityType: "employee",
-    entityId: employeeId,
-  });
   await logAudit({
     actorId: admin.id,
     actorType: "admin",

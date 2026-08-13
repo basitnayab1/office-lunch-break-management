@@ -2,24 +2,17 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "//:ai",
-    short_name: "//:ai",
+    name: "Bite Station",
+    short_name: "Bite Station",
     description: "Smart breaks and workforce break management.",
     start_url: "/",
     scope: "/",
     display: "standalone",
-    orientation: "portrait-primary",
-    background_color: "#000000",
+    background_color: "#f8faf9",
     theme_color: "#0f6a5a",
     lang: "en",
     categories: ["business", "productivity"],
     icons: [
-      {
-        src: "/bite-station-logo-transparent.png",
-        sizes: "961x594",
-        type: "image/png",
-        purpose: "any",
-      },
       {
         src: "/icons/icon-192.png",
         sizes: "192x192",

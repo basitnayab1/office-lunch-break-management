@@ -1,5 +1,6 @@
 import { getOfficeSettings } from "@/actions/settings";
 import { SettingsForm } from "@/components/admin/settings-form";
+import { AdminChangePasswordForm } from "@/components/admin/change-password-form";
 import {
   getGoogleSheetId,
   isGoogleSheetsConfigured,
@@ -28,6 +29,7 @@ export default async function SettingsPage() {
           process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() || null
         }
       />
+      <AdminChangePasswordForm />
     </div>
   );
 }

@@ -102,6 +102,314 @@ function buildEmployeeEmail(
   return { email: `${local}@office.local` };
 }
 
+const ADMIN_PASSWORD_MIN_LENGTH = 8;
+
+function isExistingAccountError(message?: string, code?: string): boolean {
+  const lower = (message ?? "").toLowerCase();
+  const errorCode = (code ?? "").toLowerCase();
+  return (
+    errorCode === "email_exists" ||
+    errorCode === "user_already_exists" ||
+    lower.includes("already been registered") ||
+    lower.includes("already registered") ||
+    lower.includes("already exists") ||
+    lower.includes("user already exists")
+  );
+}
+
+function safeCreateAdminAuthMessage(error: {
+  message?: string;
+  code?: string;
+} | null): string {
+  const raw = (error?.message ?? "Unable to create admin account.").replace(
+    /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,
+    "[redacted]"
+  );
+  if (isExistingAccountError(raw, error?.code)) {
+    return "An account with this email already exists.";
+  }
+  if (isLikelyLeakedPasswordError(raw)) {
+    return "That password appears in known data breaches. Please choose a stronger password.";
+  }
+  const code = (error?.code ?? "").toLowerCase();
+  if (code === "weak_password" || raw.toLowerCase().includes("password should be")) {
+    return raw.length < 200 ? raw : "Password is too weak. Choose a stronger password.";
+  }
+  if (raw.length < 180 && !/token|secret|apikey|authorization/i.test(raw)) {
+    return raw;
+  }
+  return "Unable to create admin account.";
+}
+
+async function allocateAdminEmployeeId(
+  service: ReturnType<typeof createServiceClient>,
+  requested: string,
+  email: string
+): Promise<{ employeeId: string } | { error: string }> {
+  const trimmed = requested.trim();
+  if (trimmed) {
+    const { data, error } = await service
+      .from("employees")
+      .select("id")
+      .eq("employee_id", trimmed)
+      .maybeSingle();
+    if (error) return { error: formatSupabaseError(error) };
+    if (data) return { error: "Employee ID already exists." };
+    return { employeeId: trimmed };
+  }
+
+  const local =
+    email
+      .split("@")[0]
+      .replace(/[^a-z0-9]/gi, "")
+      .toUpperCase()
+      .slice(0, 12) || "USER";
+  const base = `ADMIN-${local}`;
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const candidate =
+      attempt === 0 ? base : `${base}-${Math.floor(10 + Math.random() * 90)}`;
+    const { data, error } = await service
+      .from("employees")
+      .select("id")
+      .eq("employee_id", candidate)
+      .maybeSingle();
+    if (error) return { error: formatSupabaseError(error) };
+    if (!data) return { employeeId: candidate };
+  }
+
+  return { error: "Unable to allocate a unique Employee ID. Please enter one." };
+}
+
+async function createAdminEmployee(
+  actor: Employee,
+  input: {
+    full_name: string;
+    employee_id: string;
+    email?: string;
+    department: string;
+    password?: string;
+    confirmPassword?: string;
+    is_active?: boolean;
+  }
+): Promise<ActionResult<EmployeeWithTempPin>> {
+  const fullName = input.full_name.trim();
+  const email = input.email?.trim().toLowerCase() ?? "";
+  const password = input.password ?? "";
+  const confirmPassword = input.confirmPassword ?? "";
+  const department = input.department.trim() || "General";
+  const isActive = input.is_active ?? true;
+
+  if (!fullName) {
+    return { success: false, error: "Full name is required." };
+  }
+  if (!department.trim()) {
+    return { success: false, error: "Department is required." };
+  }
+  if (!email || !email.includes("@") || !email.includes(".")) {
+    return { success: false, error: "A valid email address is required." };
+  }
+  if (!password) {
+    return { success: false, error: "Password is required." };
+  }
+  if (password.length < ADMIN_PASSWORD_MIN_LENGTH) {
+    return {
+      success: false,
+      error: `Password must be at least ${ADMIN_PASSWORD_MIN_LENGTH} characters.`,
+    };
+  }
+  if (!confirmPassword) {
+    return { success: false, error: "Please confirm the password." };
+  }
+  if (password !== confirmPassword) {
+    return { success: false, error: "Password and confirmation do not match." };
+  }
+
+  let service;
+  try {
+    service = createServiceClient();
+  } catch (error) {
+    const message = formatUnknownError(error);
+    console.error("[createEmployee] service client error:", message);
+    return {
+      success: false,
+      error: `Supabase service role not configured: ${message}`,
+    };
+  }
+
+  const { data: existingEmail, error: existingEmailError } = await service
+    .from("employees")
+    .select("id")
+    .ilike("email", email.replace(/[%_]/g, "\\$&"))
+    .maybeSingle();
+
+  if (existingEmailError) {
+    return { success: false, error: formatSupabaseError(existingEmailError) };
+  }
+  if (existingEmail) {
+    return { success: false, error: "An account with this email already exists." };
+  }
+
+  const employeeIdResult = await allocateAdminEmployeeId(
+    service,
+    input.employee_id,
+    email
+  );
+  if ("error" in employeeIdResult) {
+    return { success: false, error: employeeIdResult.error };
+  }
+
+  const created = await service.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: fullName,
+      department,
+    },
+  });
+
+  if (created.error || !created.data.user?.id) {
+    console.error("[createEmployee] createUser failed:", {
+      code: created.error?.code ?? null,
+      message: created.error?.message ?? null,
+    });
+    return {
+      success: false,
+      error: safeCreateAdminAuthMessage(created.error),
+    };
+  }
+
+  const createdUserId = created.data.user.id;
+
+  const profilePayload = {
+    id: createdUserId,
+    employee_id: employeeIdResult.employeeId,
+    full_name: fullName,
+    email,
+    department,
+    allowed_break_minutes: 60,
+    role: "admin" as UserRole,
+    is_active: isActive,
+  };
+
+  const { data: existingProfile } = await service
+    .from("employees")
+    .select("id")
+    .eq("id", createdUserId)
+    .maybeSingle();
+
+  let data: Employee | null = null;
+  let error: {
+    message?: string;
+    code?: string;
+    details?: string;
+    hint?: string;
+  } | null = null;
+
+  if (existingProfile) {
+    const updated = await service
+      .from("employees")
+      .update({
+        employee_id: profilePayload.employee_id,
+        full_name: profilePayload.full_name,
+        email: profilePayload.email,
+        department: profilePayload.department,
+        allowed_break_minutes: profilePayload.allowed_break_minutes,
+        role: profilePayload.role,
+        is_active: profilePayload.is_active,
+      })
+      .eq("id", createdUserId)
+      .select(employeeSelect())
+      .single();
+    data = updated.data as Employee | null;
+    error = updated.error;
+  } else {
+    const inserted = await service
+      .from("employees")
+      .insert(profilePayload)
+      .select(employeeSelect())
+      .single();
+    data = inserted.data as Employee | null;
+    error = inserted.error;
+  }
+
+  if (error || !data) {
+    const message = error
+      ? formatSupabaseError(error)
+      : "employees insert/update returned no row.";
+    console.error("[createEmployee] employees write failed:", error);
+
+    const { error: cleanupError } =
+      await service.auth.admin.deleteUser(createdUserId);
+    if (cleanupError) {
+      console.error(
+        "[createEmployee] auth cleanup failed:",
+        cleanupError.message
+      );
+      return {
+        success: false,
+        error:
+          "Admin Auth account was created but the employee profile could not be saved, and automatic cleanup failed. Do not retry with the same email until this is resolved.",
+      };
+    }
+
+    return {
+      success: false,
+      error: `Admin profile could not be saved (${message}). The Auth user was removed. Please try again.`,
+    };
+  }
+
+  if (data.role !== "admin" || data.id !== createdUserId) {
+    const { error: cleanupError } =
+      await service.auth.admin.deleteUser(createdUserId);
+    if (cleanupError) {
+      console.error(
+        "[createEmployee] auth cleanup failed:",
+        cleanupError.message
+      );
+    }
+    return {
+      success: false,
+      error: "Admin profile was not saved with the Auth user id. Please try again.",
+    };
+  }
+
+  revalidatePath("/admin/employees");
+  revalidatePath("/");
+  revalidatePath("/admin");
+
+  const normalized = normalizeEmployee(data);
+
+  await logAudit({
+    actorId: actor.id,
+    actorType: "admin",
+    action: "admin_created",
+    targetType: "employee",
+    targetId: data.id,
+    newData: {
+      id: normalized.id,
+      employee_id: normalized.employee_id,
+      full_name: normalized.full_name,
+      email: normalized.email,
+      department: normalized.department,
+      role: normalized.role,
+      is_active: normalized.is_active,
+    },
+  });
+
+  return {
+    success: true,
+    data: {
+      employee: normalized,
+      temporaryPin: "",
+      pinWasGenerated: false,
+    },
+    message:
+      "Admin created successfully. They can sign in at Admin Login with their email and password.",
+  };
+}
+
 export async function listEmployees(): Promise<Employee[]> {
   try {
     await requireAdmin();
@@ -125,6 +433,8 @@ export async function createEmployee(input: {
   department: string;
   role: "employee" | "admin";
   pin?: string;
+  password?: string;
+  confirmPassword?: string;
   is_active?: boolean;
 }): Promise<ActionResult<EmployeeWithTempPin>> {
   let admin: Employee;
@@ -141,6 +451,10 @@ export async function createEmployee(input: {
   let createdAuthUserId: string | null = null;
 
   try {
+    if (input.role === "admin") {
+      return await createAdminEmployee(admin, input);
+    }
+
     if (!input.full_name.trim() || !input.employee_id.trim()) {
       return { success: false, error: "Name and Employee ID are required." };
     }
@@ -149,7 +463,7 @@ export async function createEmployee(input: {
       return { success: false, error: "Department is required." };
     }
 
-    const role: UserRole = input.role === "admin" ? "admin" : "employee";
+    const role: UserRole = "employee";
     const isActive = input.is_active ?? true;
 
     const providedPin = input.pin?.trim() ?? "";

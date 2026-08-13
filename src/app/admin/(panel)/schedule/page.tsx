@@ -13,7 +13,7 @@ export default async function AdminSchedulePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-[family-name:var(--font-display)] text-3xl font-semibold">
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-semibold sm:text-3xl">
           Schedule
         </h2>
         <p className="mt-2 text-[var(--ink-muted)]">

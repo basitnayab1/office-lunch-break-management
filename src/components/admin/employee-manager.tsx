@@ -64,7 +64,7 @@ function PasswordInput({
         <button
           type="button"
           onClick={onToggleVisible}
-          className="absolute inset-y-0 right-0 px-3 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
+          className="absolute inset-y-0 right-0 min-w-11 px-3 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
           aria-label={visible ? `Hide ${label}` : `Show ${label}`}
         >
           {visible ? "Hide" : "Show"}
@@ -287,8 +287,8 @@ export function EmployeeManager({
         </p>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
-        <Card className="h-fit p-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,22.5rem)_minmax(0,1fr)]">
+        <Card className="h-fit p-4 sm:p-6">
           <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold">
             Add employee
           </h2>
@@ -520,9 +520,15 @@ export function EmployeeManager({
                 <tbody>
                   {filtered.map((emp) => (
                     <tr key={emp.id} className="border-t border-[var(--line)]">
-                      <td className="px-4 py-3 font-medium">{emp.full_name}</td>
-                      <td className="px-4 py-3">{emp.employee_id}</td>
-                      <td className="px-4 py-3">{emp.department}</td>
+                      <td className="max-w-[12rem] truncate px-4 py-3 font-medium" title={emp.full_name}>
+                        {emp.full_name}
+                      </td>
+                      <td className="max-w-[10rem] truncate px-4 py-3" title={emp.employee_id}>
+                        {emp.employee_id}
+                      </td>
+                      <td className="max-w-[10rem] truncate px-4 py-3" title={emp.department}>
+                        {emp.department}
+                      </td>
                       <td className="px-4 py-3">
                         <Badge
                           tone={emp.role === "admin" ? "brand" : "neutral"}
@@ -605,8 +611,8 @@ export function EmployeeManager({
       </div>
 
       {editing ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <Card className="w-full max-w-lg p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <Card className="max-h-[min(100dvh-2rem,100svh-2rem)] w-full max-w-lg overflow-y-auto p-6">
             <h3 className="font-[family-name:var(--font-display)] text-xl font-semibold">
               Edit employee
             </h3>
@@ -668,7 +674,7 @@ export function EmployeeManager({
                   <option value="inactive">Inactive</option>
                 </Select>
               </div>
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-wrap gap-2 pt-2">
                 <Button type="submit" disabled={pending}>
                   Save
                 </Button>
@@ -686,8 +692,8 @@ export function EmployeeManager({
       ) : null}
 
       {pinReveal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
-          <Card className="animate-rise w-full max-w-md p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/45 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <Card className="animate-rise max-h-[min(100dvh-2rem,100svh-2rem)] w-full max-w-md overflow-y-auto p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--brand)]">
               Success
             </p>
@@ -697,12 +703,16 @@ export function EmployeeManager({
 
             <div className="mt-6 space-y-3 rounded-2xl bg-[var(--brand-soft)] p-4 text-sm">
               <div className="flex justify-between gap-4">
-                <span className="text-[var(--ink-muted)]">Employee</span>
-                <span className="font-semibold">{pinReveal.full_name}</span>
+                <span className="shrink-0 text-[var(--ink-muted)]">Employee</span>
+                <span className="min-w-0 break-words text-right font-semibold">
+                  {pinReveal.full_name}
+                </span>
               </div>
               <div className="flex justify-between gap-4">
-                <span className="text-[var(--ink-muted)]">Employee ID</span>
-                <span className="font-semibold">{pinReveal.employee_id}</span>
+                <span className="shrink-0 text-[var(--ink-muted)]">Employee ID</span>
+                <span className="min-w-0 break-all text-right font-semibold">
+                  {pinReveal.employee_id}
+                </span>
               </div>
               <div className="flex items-center justify-between gap-4 border-t border-[var(--line)] pt-3">
                 <span className="text-[var(--ink-muted)]">Temporary PIN</span>

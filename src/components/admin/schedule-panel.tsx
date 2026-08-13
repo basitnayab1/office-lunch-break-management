@@ -50,7 +50,7 @@ export function SchedulePanel({
 
   return (
     <Card className="overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[var(--line)] px-6 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-4 sm:px-6">
         <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold">
           Slot Booking Queue
         </h2>
@@ -71,7 +71,7 @@ export function SchedulePanel({
           <tbody>
             {bookings.map((booking) => (
               <tr key={booking.id} className="border-t border-[var(--line)]">
-                <td className="px-4 py-3 font-medium">
+                <td className="max-w-[12rem] truncate px-4 py-3 font-medium" title={booking.employee?.full_name ?? "Employee"}>
                   {booking.employee?.full_name ?? "Employee"}
                 </td>
                 <td className="px-4 py-3">

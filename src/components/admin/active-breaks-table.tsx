@@ -96,7 +96,7 @@ export function ActiveBreaksTable({
 
   return (
     <Card className="overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[var(--line)] px-6 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-4 sm:px-6">
         <h2 className="text-lg font-bold">
           Live Active Breaks
         </h2>
@@ -132,7 +132,7 @@ export function ActiveBreaksTable({
             <tbody>
               {rows.map(({ break: b, metrics }) => (
                 <tr key={b.id} className="border-t border-[var(--line)]">
-                  <td className="px-4 py-3 font-medium">
+                  <td className="max-w-[12rem] truncate px-4 py-3 font-medium" title={b.employee?.full_name ?? "—"}>
                     {b.employee?.full_name ?? "—"}
                   </td>
                   {!compact ? (

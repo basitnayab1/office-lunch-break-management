@@ -31,16 +31,17 @@ export function LoginForm({ officeName }: { officeName: string }) {
   }
 
   return (
-    <div className="animate-rise mx-auto w-full max-w-[420px]">
+    <div className="animate-rise mx-auto w-full min-w-0 max-w-[420px]">
       <div className="mb-8">
         <div className="flex flex-col items-start gap-3">
-          <BiteStationLogo size={104} priority className="shrink-0 drop-shadow-sm" />
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+          <BiteStationLogo size={80} priority className="max-w-full shrink-0 drop-shadow-sm sm:hidden" />
+          <BiteStationLogo size={104} priority className="hidden shrink-0 drop-shadow-sm sm:block" />
+          <p className="max-w-full break-words text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">
             {officeName}
           </p>
         </div>
 
-        <h1 className="mt-8 font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight text-[var(--ink)]">
+        <h1 className="mt-8 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
           Welcome Back
         </h1>
         <p className="mt-2 text-[var(--ink-muted)]">
@@ -83,7 +84,7 @@ export function LoginForm({ officeName }: { officeName: string }) {
             <button
               type="button"
               onClick={() => setShowPin((value) => !value)}
-              className="absolute inset-y-0 right-0 px-3 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              className="absolute inset-y-0 right-0 min-w-11 px-3 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
               aria-label={showPin ? "Hide PIN" : "Show PIN"}
             >
               {showPin ? "Hide" : "Show"}

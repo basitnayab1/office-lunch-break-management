@@ -45,7 +45,7 @@ function PasswordField({
         <button
           type="button"
           onClick={onToggleVisible}
-          className="absolute inset-y-0 right-0 px-3 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
+          className="absolute inset-y-0 right-0 min-w-11 px-3 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
           aria-label={visible ? `Hide ${label}` : `Show ${label}`}
         >
           {visible ? "Hide" : "Show"}
@@ -196,7 +196,7 @@ export function AdminChangePasswordForm() {
   }
 
   return (
-    <Card className="p-6">
+    <Card className="p-4 sm:p-6">
       <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold">
         Change Password
       </h2>

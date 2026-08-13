@@ -312,17 +312,17 @@ export function BreakControl({
 
   if (!activeBreak || !metrics) {
     return (
-      <Card className="animate-rise rounded-[18px] border-[#dce3ec] bg-white/95 p-8 shadow-[0_20px_54px_rgba(22,41,70,0.11)] md:p-10">
-        <div className="flex items-start justify-between gap-6">
-          <div>
+      <Card className="animate-rise rounded-[18px] border-[#dce3ec] bg-white/95 p-5 shadow-[0_20px_54px_rgba(22,41,70,0.11)] sm:p-8 md:p-10">
+        <div className="flex items-start justify-between gap-4 sm:gap-6">
+          <div className="min-w-0">
             <Badge tone="brand">
               <span className="mr-2 h-2.5 w-2.5 rounded-full bg-[#24b476]" />
               Ready
             </Badge>
-            <h2 className="mt-4 text-3xl font-extrabold tracking-normal text-[#10233c] md:text-4xl">
+            <h2 className="mt-4 text-2xl font-extrabold tracking-normal text-[#10233c] sm:text-3xl md:text-4xl">
               Break Status
             </h2>
-            <p className="mt-4 text-lg font-medium text-[#5c687d]">
+            <p className="mt-4 text-base font-medium text-[#5c687d] sm:text-lg">
             Select a break type, then start your break. Duration is assigned
             automatically.
             </p>
@@ -350,34 +350,36 @@ export function BreakControl({
                 onClick={() => setSelectedType(option.type)}
                 disabled={pending}
                 className={cn(
-                  "group relative min-h-[10rem] rounded-[16px] border bg-white px-6 py-6 text-left transition",
+                  "group relative min-h-[8.5rem] rounded-[16px] border bg-white px-5 py-5 text-left transition sm:min-h-[10rem] sm:px-6 sm:py-6",
                   selected ? styles.selected : styles.ring
                 )}
                 style={{ color: styles.accent }}
               >
+                <span className="flex items-start gap-4">
+                  <span
+                    className="grid h-16 w-16 shrink-0 place-items-center rounded-full sm:h-20 sm:w-20"
+                    style={{ backgroundColor: styles.soft }}
+                  >
+                    {styles.icon}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-extrabold uppercase sm:text-base">
+                      {option.label}
+                    </span>
+                    <span className="mt-1 block text-2xl font-extrabold text-[#10233c] sm:mt-2 sm:text-3xl">
+                      {displayMinutes} min
+                    </span>
+                    <span className="mt-1 block text-sm font-medium text-[#657189] sm:mt-2 sm:text-base">
+                      {settings.break_test_mode
+                        ? `Test duration, normally ${option.description}`
+                        : `${option.label} — ${option.description}`}
+                    </span>
+                  </span>
+                </span>
                 <span
-                  className="absolute bottom-5 left-9 h-1 w-20 rounded-full"
+                  className="mt-4 block h-1 w-20 rounded-full"
                   style={{ backgroundColor: styles.accent }}
                 />
-                <span
-                  className="grid h-22 w-22 place-items-center rounded-full"
-                  style={{ backgroundColor: styles.soft }}
-                >
-                  {styles.icon}
-                </span>
-                <span className="absolute left-[8.5rem] top-7">
-                  <span className="block text-base font-extrabold uppercase">
-                    {option.label}
-                  </span>
-                  <span className="mt-3 block text-3xl font-extrabold text-[#10233c]">
-                    {displayMinutes} min
-                  </span>
-                  <span className="mt-3 block text-base font-medium text-[#657189]">
-                    {settings.break_test_mode
-                      ? `Test duration, normally ${option.description}`
-                      : `${option.label} — ${option.description}`}
-                  </span>
-                </span>
               </button>
             );
           })}
@@ -385,7 +387,7 @@ export function BreakControl({
 
         <Button
           size="xl"
-          className="mt-10 h-20 w-full rounded-[14px] bg-[#006b4c] text-2xl font-extrabold shadow-[inset_0_-4px_0_rgba(0,0,0,0.12),0_18px_34px_rgba(0,107,76,0.24)] hover:bg-[#007b58]"
+          className="mt-8 h-16 w-full rounded-[14px] bg-[#006b4c] text-xl font-extrabold shadow-[inset_0_-4px_0_rgba(0,0,0,0.12),0_18px_34px_rgba(0,107,76,0.24)] hover:bg-[#007b58] sm:mt-10 sm:h-20 sm:text-2xl"
           onClick={onStart}
           disabled={pending || !selectedType}
         >
@@ -416,7 +418,7 @@ export function BreakControl({
   return (
     <Card
       className={cn(
-        "animate-rise overflow-hidden rounded-[18px] border-[#dce3ec] bg-white/95 p-8 shadow-[0_20px_54px_rgba(22,41,70,0.11)] md:p-10",
+        "animate-rise overflow-hidden rounded-[18px] border-[#dce3ec] bg-white/95 p-5 shadow-[0_20px_54px_rgba(22,41,70,0.11)] sm:p-8 md:p-10",
         overtime && "border-[var(--danger)] break-alarm-exceeded",
         warning && "border-[var(--warn)] break-alarm-warning"
       )}
@@ -434,7 +436,7 @@ export function BreakControl({
         </span>
       </div>
 
-      <h2 className="mt-5 text-3xl font-extrabold tracking-normal text-[#10233c] md:text-4xl">
+      <h2 className="mt-5 text-2xl font-extrabold tracking-normal text-[#10233c] sm:text-3xl md:text-4xl">
         {breakTypeLabel(activeBreak.break_type)} Break
       </h2>
 
@@ -477,7 +479,7 @@ export function BreakControl({
           </p>
           <p
             className={cn(
-              "mt-1 font-[family-name:var(--font-mono)] text-4xl font-semibold tracking-tight",
+              "mt-1 break-words font-[family-name:var(--font-mono)] text-3xl font-semibold tracking-tight sm:text-4xl",
               overtime
                 ? "timer-overtime text-[var(--danger)]"
                 : warning
@@ -509,7 +511,7 @@ export function BreakControl({
       <Button
         size="xl"
         variant="danger"
-        className="mt-10 h-20 w-full rounded-[14px] text-2xl font-extrabold"
+        className="mt-8 h-16 w-full rounded-[14px] text-xl font-extrabold sm:mt-10 sm:h-20 sm:text-2xl"
         onClick={onEnd}
         disabled={pending}
       >

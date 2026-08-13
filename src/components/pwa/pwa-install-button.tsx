@@ -95,7 +95,7 @@ export function PwaInstallButton({
     : "In Chrome or Edge, open the browser menu and choose Install app / Install Bite Station. On iPhone or iPad, use Share → Add to Home Screen.";
 
   const helpPanel = (
-    <div className="max-w-xs rounded-2xl border border-[var(--line)] bg-[var(--bg-elevated)] p-4 text-left shadow-[var(--shadow)]">
+    <div className="w-full max-w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-[var(--line)] bg-[var(--bg-elevated)] p-4 text-left shadow-[var(--shadow)]">
       <p className="text-sm font-semibold text-[var(--ink)]">Install App</p>
       <p className="mt-2 text-sm text-[var(--ink-muted)]">{helpCopy}</p>
       <div className="mt-3 flex gap-2">
@@ -127,7 +127,11 @@ export function PwaInstallButton({
           type="button"
           variant={compact ? "secondary" : "primary"}
           size={compact ? "md" : "lg"}
-          className={compact ? undefined : "shadow-[0_12px_28px_rgba(15,106,90,0.28)]"}
+          className={
+            compact
+              ? undefined
+              : "h-11 px-4 text-sm shadow-[0_12px_28px_rgba(15,106,90,0.28)] sm:h-14 sm:px-6 sm:text-base"
+          }
           onClick={async () => {
             try {
               await deferred.prompt();
@@ -157,6 +161,7 @@ export function PwaInstallButton({
           type="button"
           variant="secondary"
           size={compact ? "md" : "lg"}
+          className={compact ? undefined : "h-11 px-4 text-sm sm:h-14 sm:px-6 sm:text-base"}
           onClick={() => setShowHelp(true)}
         >
           Install App
@@ -171,7 +176,7 @@ export function PwaInstallButton({
 /** Fixed corner host so install is available without redesigning pages. */
 export function PwaInstallHost() {
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[60] flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
+    <div className="pointer-events-none fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-[60] flex max-w-[calc(100vw-1.5rem)] flex-col items-end gap-2 sm:bottom-6 sm:right-6">
       <PwaInstallButton />
     </div>
   );

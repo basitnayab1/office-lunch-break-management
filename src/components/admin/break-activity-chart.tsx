@@ -47,8 +47,8 @@ export function BreakActivityChart({
 
   return (
     <div className="rounded-[var(--radius)] border border-[var(--line)] bg-white p-6 shadow-[var(--shadow)]">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">Break Activity ({analytics.title})</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="min-w-0 text-lg font-bold">Break Activity ({analytics.title})</h2>
         <div className="relative">
           <button
             type="button"
@@ -82,9 +82,10 @@ export function BreakActivityChart({
         <span className="h-3 w-3 rounded-full bg-[var(--brand)]" />
         Completed Breaks
       </div>
+      <div className="mt-2 min-w-0 overflow-x-auto">
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        className="mt-2 h-[190px] w-full overflow-visible"
+        className="h-[190px] w-full min-w-0"
         role="img"
         aria-label={`Completed breaks for ${analytics.title}`}
       >
@@ -142,6 +143,7 @@ export function BreakActivityChart({
           </g>
         ))}
       </svg>
+      </div>
     </div>
   );
 }

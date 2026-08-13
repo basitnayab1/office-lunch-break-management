@@ -19,7 +19,12 @@ export const dynamic = "force-dynamic";
 function OfficeMark() {
   return (
     <span className="inline-flex items-center justify-center">
-      <BiteStationBrand logoSize={76} priority />
+      <span className="md:hidden">
+        <BiteStationBrand logoSize={48} priority />
+      </span>
+      <span className="hidden md:inline-flex">
+        <BiteStationBrand logoSize={76} priority />
+      </span>
     </span>
   );
 }
@@ -59,7 +64,7 @@ export default async function EmployeeDashboardPage() {
   } • ${displayEmail}`;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f8fbfa] text-[var(--ink)]">
+    <main className="relative min-h-screen overflow-x-clip bg-[#f8fbfa] text-[var(--ink)]">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-x-0 top-0 h-36 bg-white" />
         <div className="absolute inset-x-0 top-[7.25rem] h-px bg-[#dfe6ef]" />
@@ -79,8 +84,8 @@ export default async function EmployeeDashboardPage() {
         </div>
       </div>
 
-      <header className="relative z-30 bg-white">
-        <div className="mx-auto flex max-w-[1540px] items-center justify-between gap-4 px-5 py-6 md:px-16 lg:px-20">
+      <header className="relative z-30 bg-white pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex max-w-[1540px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-6 md:px-16 lg:px-20">
           <div className="flex items-center gap-10">
             <OfficeMark />
             <div className="hidden h-12 w-px bg-[#dde4ec] md:block" />
@@ -94,12 +99,12 @@ export default async function EmployeeDashboardPage() {
         </div>
       </header>
 
-      <section className="relative mx-auto max-w-[1040px] px-5 pb-10 pt-14 md:px-6 md:pb-14 md:pt-16">
-        <div className="space-y-4">
-          <p className="text-xl font-bold text-[#5c687d]">
+      <section className="relative mx-auto max-w-[1040px] px-4 pb-[max(6rem,calc(env(safe-area-inset-bottom)+5.5rem))] pt-10 sm:px-5 md:px-6 md:pb-14 md:pt-16">
+        <div className="min-w-0 space-y-4">
+          <p className="text-lg font-bold text-[#5c687d] sm:text-xl">
               Good to see you,
           </p>
-          <h1 className="text-4xl font-extrabold leading-tight tracking-normal text-[#10233c] md:text-5xl">
+          <h1 className="break-words text-3xl font-extrabold leading-tight tracking-normal text-[#10233c] sm:text-4xl md:text-5xl">
             {employee.full_name.split(" ").slice(0, -1).join(" ") || employee.full_name}{" "}
             <span className="text-[#117149]">
               {employee.full_name.split(" ").length > 1
@@ -107,8 +112,8 @@ export default async function EmployeeDashboardPage() {
                 : ""}
             </span>
           </h1>
-          <div className="flex flex-wrap items-center gap-3 text-lg font-medium text-[#5f6b80]">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#e3f3eb] text-[#008655]">
+          <div className="flex min-w-0 flex-wrap items-center gap-3 text-base font-medium text-[#5f6b80] sm:text-lg">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e3f3eb] text-[#008655]">
               <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[2]">
                 <rect x="3" y="7" width="18" height="13" rx="2" />
                 <path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7" />
@@ -117,7 +122,7 @@ export default async function EmployeeDashboardPage() {
                 <path d="M15 12v2" />
                   </svg>
               </span>
-            <span>{employeeSubtitle}</span>
+            <span className="min-w-0 break-words">{employeeSubtitle}</span>
           </div>
         </div>
 
@@ -128,7 +133,7 @@ export default async function EmployeeDashboardPage() {
             settings={settings}
           />
 
-          <div className="flex items-center justify-center gap-2 text-base font-semibold text-[#68758b]">
+          <div className="flex items-center justify-center gap-2 text-center text-sm font-semibold text-[#68758b] sm:text-base">
             <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[1.8]">
               <path d="M12 3 5 6v5c0 4.4 2.7 8.2 7 10 4.3-1.8 7-5.6 7-10V6l-7-3Z" />
               <path d="m9 12 2 2 4-5" />

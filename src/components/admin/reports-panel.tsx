@@ -144,6 +144,7 @@ export function ReportsPanel({
           {daily.employeesWithOvertime.length === 0 ? (
             <p className="px-6 py-6 text-[var(--ink-muted)]">None for this day.</p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-[#f7f3ea] text-[var(--ink-muted)]">
                 <tr>
@@ -155,8 +156,12 @@ export function ReportsPanel({
               <tbody>
                 {daily.employeesWithOvertime.map((e) => (
                   <tr key={e.employee_id} className="border-t border-[var(--line)]">
-                    <td className="px-4 py-3 font-medium">{e.full_name}</td>
-                    <td className="px-4 py-3">{e.department}</td>
+                    <td className="max-w-[12rem] truncate px-4 py-3 font-medium" title={e.full_name}>
+                      {e.full_name}
+                    </td>
+                    <td className="max-w-[10rem] truncate px-4 py-3" title={e.department}>
+                      {e.department}
+                    </td>
                     <td className="px-4 py-3 font-semibold text-[var(--danger)]">
                       {e.extra_minutes}
                     </td>
@@ -164,6 +169,7 @@ export function ReportsPanel({
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </Card>
       </section>
@@ -226,8 +232,12 @@ export function ReportsPanel({
               <tbody>
                 {monthly.map((r) => (
                   <tr key={r.employee_id} className="border-t border-[var(--line)]">
-                    <td className="px-4 py-3 font-medium">{r.full_name}</td>
-                    <td className="px-4 py-3">{r.department}</td>
+                    <td className="max-w-[12rem] truncate px-4 py-3 font-medium" title={r.full_name}>
+                      {r.full_name}
+                    </td>
+                    <td className="max-w-[10rem] truncate px-4 py-3" title={r.department}>
+                      {r.department}
+                    </td>
                     <td className="px-4 py-3">{r.breakCount}</td>
                     <td className="px-4 py-3">
                       {r.breakfastCount} ({r.breakfastMinutes}m)

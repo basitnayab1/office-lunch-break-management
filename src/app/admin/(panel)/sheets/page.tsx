@@ -16,7 +16,7 @@ export default async function GoogleSheetsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-[family-name:var(--font-display)] text-3xl font-semibold">
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-semibold sm:text-3xl">
           Google Sheets
         </h2>
         <p className="mt-2 text-[var(--ink-muted)]">

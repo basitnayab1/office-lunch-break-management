@@ -27,16 +27,17 @@ export function AdminLoginForm({ officeName }: { officeName: string }) {
   }
 
   return (
-    <div className="animate-rise mx-auto w-full max-w-[420px]">
+    <div className="animate-rise mx-auto w-full min-w-0 max-w-[420px]">
       <div className="mb-8">
         <div className="flex flex-col items-start gap-3">
-          <BiteStationLogo size={86} priority className="shrink-0 drop-shadow-sm" />
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+          <BiteStationLogo size={72} priority className="max-w-full shrink-0 drop-shadow-sm sm:hidden" />
+          <BiteStationLogo size={86} priority className="hidden shrink-0 drop-shadow-sm sm:block" />
+          <p className="max-w-full break-words text-xs uppercase tracking-[0.16em] text-[var(--ink-muted)]">
             Admin Panel · {officeName}
           </p>
         </div>
 
-        <h1 className="mt-8 font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight text-[var(--ink)]">
+        <h1 className="mt-8 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
           Admin Sign In
         </h1>
         <p className="mt-2 text-[var(--ink-muted)]">

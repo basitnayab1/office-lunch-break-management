@@ -109,10 +109,10 @@ export function SlotBooking({
   }
 
   return (
-    <Card className="p-6">
+    <Card className="p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-semibold">
+          <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold sm:text-2xl">
             Reserve a Break Slot
           </h2>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
@@ -166,7 +166,7 @@ export function SlotBooking({
               key={booking.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-white px-4 py-3"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium">
                   {formatOfficeDateTime(booking.scheduled_start, safeTimezone)}
                 </p>

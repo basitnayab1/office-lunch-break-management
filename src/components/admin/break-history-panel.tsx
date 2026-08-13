@@ -79,7 +79,7 @@ export function BreakHistoryPanel({
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
           <div>
             <Label>Date</Label>
@@ -168,7 +168,7 @@ export function BreakHistoryPanel({
                 return (
                   <tr key={r.id} className="border-t border-[var(--line)]">
                     <td className="px-4 py-3">{r.break_date}</td>
-                    <td className="px-4 py-3 font-medium">
+                    <td className="max-w-[12rem] truncate px-4 py-3 font-medium" title={r.employee?.full_name ?? undefined}>
                       {r.employee?.full_name}
                     </td>
                     <td className="px-4 py-3">{breakTypeLabel(r.break_type)}</td>

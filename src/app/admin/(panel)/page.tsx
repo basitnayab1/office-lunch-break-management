@@ -104,7 +104,7 @@ function TypeProgressCard({
         >
           {meta.icon}
         </span>
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-medium text-[var(--ink-muted)]">{meta.label}</p>
           <p className="mt-1 text-3xl font-bold leading-none">
             {count}
@@ -143,7 +143,7 @@ function DistributionCard({
   return (
     <div className="rounded-[var(--radius)] border border-[var(--line)] bg-white p-6 shadow-[var(--shadow)]">
       <h2 className="text-lg font-bold">Break Type Distribution (This Week)</h2>
-      <div className="mt-7 grid items-center gap-8 md:grid-cols-[220px_1fr]">
+      <div className="mt-7 grid items-center gap-8 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
         <div
           className="mx-auto grid h-44 w-44 place-items-center rounded-full"
           style={{
@@ -199,12 +199,12 @@ function UpcomingSlots({
             const end = new Date(booking.scheduled_end);
             const today = new Date().toDateString() === start.toDateString();
             return (
-              <div key={booking.id} className="grid grid-cols-[48px_1fr_auto] items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-[var(--brand-soft)] text-[var(--brand)]">
+              <div key={booking.id} className="grid grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-3">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--brand-soft)] text-[var(--brand)]">
                   {typeMeta.lunch.icon}
                 </span>
-                <div>
-                  <p className="font-semibold">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold" title={booking.employee?.full_name ?? "Break Slot"}>
                     {booking.employee?.full_name ?? "Break Slot"}
                   </p>
                   <p className="text-sm text-[var(--ink-muted)]">
@@ -263,10 +263,10 @@ function ActiveBreaksSummary({
             return (
               <div
                 key={breakSession.id}
-                className="grid grid-cols-[1fr_auto] gap-3 border-b border-[var(--line)] pb-3 last:border-b-0 last:pb-0"
+                className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-[var(--line)] pb-3 last:border-b-0 last:pb-0"
               >
-                <div>
-                  <p className="font-semibold">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold" title={breakSession.employee?.full_name ?? "Employee"}>
                     {breakSession.employee?.full_name ?? "Employee"}
                   </p>
                   <p className="text-sm text-[var(--ink-muted)]">
@@ -323,8 +323,8 @@ function CoverageSummary({
                 : Math.round((row.availableEmployees / row.totalEmployees) * 100);
             return (
               <div key={row.department}>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold">{row.department}</p>
+                <div className="flex min-w-0 items-center justify-between gap-3">
+                  <p className="min-w-0 truncate font-semibold" title={row.department}>{row.department}</p>
                   <p className="text-sm text-[var(--ink-muted)]">
                     {row.availableEmployees}/{row.totalEmployees} available
                   </p>
@@ -369,16 +369,16 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex justify-end gap-3 md:hidden">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end md:hidden">
         <Link
           href="/admin/reports"
-          className="rounded-[8px] border border-[var(--line)] bg-white px-4 py-2 text-sm font-semibold shadow-[var(--shadow)]"
+          className="inline-flex min-h-11 items-center justify-center rounded-[8px] border border-[var(--line)] bg-white px-4 py-2 text-center text-sm font-semibold shadow-[var(--shadow)]"
         >
           Export Report
         </Link>
         <Link
           href="/admin/schedule"
-          className="rounded-[8px] bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white shadow-[var(--shadow)]"
+          className="inline-flex min-h-11 items-center justify-center rounded-[8px] bg-[var(--brand)] px-4 py-2 text-center text-sm font-semibold text-white shadow-[var(--shadow)]"
         >
           Create Break Slot
         </Link>

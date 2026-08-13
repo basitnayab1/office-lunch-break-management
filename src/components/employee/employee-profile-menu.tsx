@@ -102,14 +102,14 @@ export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
   }
 
   return (
-    <div className="relative flex items-center gap-4">
+    <div className="relative flex min-w-0 shrink items-center gap-2 sm:gap-4">
       <Button
         type="button"
         variant="secondary"
         onClick={() => setOpen(true)}
-        className="h-16 rounded-[12px] border-[#dce4ed] px-8 text-lg font-bold text-[#00664b] shadow-none hover:bg-[#f8fbfa]"
+        className="h-11 rounded-[12px] border-[#dce4ed] px-3 text-sm font-bold text-[#00664b] shadow-none hover:bg-[#f8fbfa] sm:h-16 sm:px-8 sm:text-lg"
       >
-        <svg viewBox="0 0 24 24" className="h-7 w-7 fill-none stroke-current stroke-[2]">
+        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[2] sm:h-7 sm:w-7">
           <path d="M20 21a8 8 0 0 0-16 0" />
           <circle cx="12" cy="7" r="4" />
         </svg>
@@ -118,14 +118,14 @@ export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
       <Button
         type="button"
         variant="primary"
-        className="h-16 rounded-[12px] bg-[#006b4c] px-8 text-lg font-bold shadow-[0_12px_24px_rgba(0,107,76,0.22)] hover:bg-[#007b58]"
+        className="h-11 rounded-[12px] bg-[#006b4c] px-3 text-sm font-bold shadow-[0_12px_24px_rgba(0,107,76,0.22)] hover:bg-[#007b58] sm:h-16 sm:px-8 sm:text-lg"
         onClick={async () => {
           await logout();
           router.push("/");
           router.refresh();
         }}
       >
-        <svg viewBox="0 0 24 24" className="h-7 w-7 fill-none stroke-current stroke-[2]">
+        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[2] sm:h-7 sm:w-7">
           <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
           <path d="M10 17l5-5-5-5" />
           <path d="M15 12H3" />
@@ -134,13 +134,13 @@ export function EmployeeProfileMenu({ employee }: { employee: Employee }) {
       </Button>
 
       {open ? (
-        <div className="fixed inset-0 z-40 grid place-items-center bg-black/30 px-4 py-6">
-          <div className="max-h-[calc(100vh-48px)] w-full max-w-[430px] overflow-y-auto rounded-[12px] border border-[var(--line)] bg-white p-4 shadow-[0_24px_70px_rgba(20,32,51,0.24)]">
-            <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
-              <div className="flex items-center gap-3">
+        <div className="fixed inset-0 z-40 grid place-items-center overflow-y-auto bg-black/30 px-4 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <div className="max-h-[min(100dvh-2rem,100svh-2rem)] w-full max-w-[430px] overflow-y-auto rounded-[12px] border border-[var(--line)] bg-white p-4 shadow-[0_24px_70px_rgba(20,32,51,0.24)]">
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] pb-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <Avatar large />
-                <div>
-                  <p className="font-semibold">{name}</p>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{name}</p>
                   <p className="text-xs text-[var(--ink-muted)]">
                     Employee profile
                   </p>

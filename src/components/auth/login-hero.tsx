@@ -15,7 +15,7 @@ export function LoginHero() {
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/55 to-black/25" />
-        <div className="absolute inset-0 flex items-end justify-between p-6">
+        <div className="absolute inset-0 flex flex-wrap items-end justify-between gap-4 p-6">
           <div className="[filter:drop-shadow(0_1px_0_rgba(255,255,255,0.9))_drop-shadow(0_8px_18px_rgba(255,255,255,0.38))]">
             <BiteStationBrand logoSize={82} showTagline inverted />
           </div>

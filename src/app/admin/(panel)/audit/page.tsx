@@ -9,7 +9,7 @@ export default async function AdminAuditPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-[family-name:var(--font-display)] text-3xl font-semibold">
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-semibold sm:text-3xl">
           Audit Logs
         </h2>
         <p className="mt-2 text-[var(--ink-muted)]">
@@ -34,14 +34,14 @@ export default async function AdminAuditPage() {
               <tbody>
                 {logs.map((log) => (
                   <tr key={log.id} className="border-t border-[var(--line)]">
-                    <td className="px-4 py-3">
+                    <td className="whitespace-nowrap px-4 py-3">
                       {new Date(log.created_at).toLocaleString()}
                     </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium">
+                    <td className="max-w-[12rem] px-4 py-3">
+                      <p className="truncate font-medium" title={log.actor?.full_name ?? log.actor_type}>
                         {log.actor?.full_name ?? log.actor_type}
                       </p>
-                      <p className="text-xs text-[var(--ink-muted)]">
+                      <p className="truncate text-xs text-[var(--ink-muted)]" title={log.actor_id ?? "system"}>
                         {log.actor_id ?? "system"}
                       </p>
                     </td>
@@ -50,9 +50,9 @@ export default async function AdminAuditPage() {
                         {log.action}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="max-w-[14rem] px-4 py-3">
                       <p>{log.target_type}</p>
-                      <p className="text-xs text-[var(--ink-muted)]">
+                      <p className="truncate text-xs text-[var(--ink-muted)]" title={log.target_id ?? ""}>
                         {log.target_id ?? ""}
                       </p>
                     </td>

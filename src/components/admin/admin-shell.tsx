@@ -267,6 +267,28 @@ export function AdminShell({
     setProfileImageUrl(imageUrl);
   }, [adminProfileImageUrl]);
 
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setMobileOpen(false);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mobileOpen]);
+
   function Avatar({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
     const sizes = {
       sm: "h-10 w-10 text-sm",
@@ -355,37 +377,66 @@ export function AdminShell({
   return (
     <div
       className={cn(
-        "min-h-screen bg-[var(--bg)] lg:grid",
+        "min-h-screen overflow-x-clip bg-[var(--bg)] lg:grid",
         sidebarCollapsed ? "lg:grid-cols-[92px_1fr]" : "lg:grid-cols-[300px_1fr]"
       )}
     >
+      {mobileOpen ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          aria-label="Close navigation"
+          onClick={() => setMobileOpen(false)}
+        />
+      ) : null}
+
       <aside
         className={cn(
-          "border-b border-[var(--line)] bg-white lg:border-b-0 lg:border-r",
-          mobileOpen ? "block" : "hidden lg:block"
+          "z-50 border-[var(--line)] bg-white",
+          "fixed inset-y-0 left-0 w-[min(18.75rem,calc(100vw-2.75rem))] border-r shadow-[0_18px_40px_rgba(20,32,51,0.18)] transition-transform duration-200",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          "lg:static lg:z-auto lg:w-auto lg:translate-x-0 lg:border-b-0 lg:shadow-none"
         )}
       >
-        <div className="sticky top-0 flex h-screen max-h-screen flex-col px-4 py-6">
-          <div className={cn("px-2 pb-7", sidebarCollapsed && "px-0 text-center")}>
-            {sidebarCollapsed ? (
-              <BiteStationBrand logoSize={42} priority />
-            ) : (
-              <BiteStationBrand logoSize={58} priority />
+        <div className="flex h-dvh max-h-dvh flex-col overflow-y-auto px-4 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:sticky lg:top-0 lg:h-screen lg:max-h-screen">
+          <div
+            className={cn(
+              "mb-2 flex items-start justify-between gap-2 px-2 pb-5",
+              sidebarCollapsed && "lg:justify-center lg:px-0"
             )}
+          >
+            <span className={cn(sidebarCollapsed && "lg:hidden")}>
+              <BiteStationBrand logoSize={58} priority />
+            </span>
+            {sidebarCollapsed ? (
+              <span className="hidden lg:inline-flex">
+                <BiteStationBrand logoSize={42} priority />
+              </span>
+            ) : null}
+            <button
+              type="button"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-[10px] border border-[var(--line)] text-2xl leading-none text-[var(--ink-muted)] lg:hidden"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close navigation"
+            >
+              ×
+            </button>
           </div>
 
           <button
             className={cn(
               "mb-4 flex h-14 w-full items-center justify-between border-b border-[var(--line)] px-4 pb-5 text-left",
-              sidebarCollapsed && "justify-center px-0"
+              sidebarCollapsed && "lg:justify-center lg:px-0"
             )}
             title={currentOfficeName}
           >
-            <span className="flex items-center gap-3 text-base font-semibold">
-              <span className="grid h-8 w-8 place-items-center rounded-md border border-[var(--line)] text-[var(--ink-muted)]">
+            <span className="flex min-w-0 items-center gap-3 text-base font-semibold">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[var(--line)] text-[var(--ink-muted)]">
                 <Icon name="layout" className="h-4 w-4" />
               </span>
-              {!sidebarCollapsed ? currentOfficeName : null}
+              <span className={cn("min-w-0 truncate", sidebarCollapsed && "lg:hidden")}>
+                {currentOfficeName}
+              </span>
             </span>
           </button>
 
@@ -397,7 +448,7 @@ export function AdminShell({
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "flex h-12 items-center gap-3 rounded-[8px] px-4 text-[15px] font-semibold transition",
-                  sidebarCollapsed && "justify-center px-0",
+                  sidebarCollapsed && "lg:justify-center lg:px-0",
                   isActive(link.href, link.exact)
                     ? "bg-[var(--brand)] text-white shadow-[0_12px_24px_rgba(0,121,95,0.22)]"
                     : "text-[var(--ink)] hover:bg-[#f2f6f5]"
@@ -405,7 +456,7 @@ export function AdminShell({
                 title={sidebarCollapsed ? link.label : undefined}
               >
                 <Icon name={link.icon as IconName} className="h-5 w-5 shrink-0" />
-                {!sidebarCollapsed ? link.label : null}
+                <span className={cn(sidebarCollapsed && "lg:hidden")}>{link.label}</span>
               </Link>
             ))}
           </nav>
@@ -413,8 +464,8 @@ export function AdminShell({
           <div className="mt-6 rounded-[8px] border border-[var(--line)] bg-white p-3">
             <button
               className={cn(
-                "flex w-full items-center gap-3 text-left",
-                sidebarCollapsed && "justify-center"
+                "flex w-full min-w-0 items-center gap-3 text-left",
+                sidebarCollapsed && "lg:justify-center"
               )}
               onClick={async () => {
                 await logout();
@@ -423,28 +474,27 @@ export function AdminShell({
               }}
             >
               <Avatar />
-              {!sidebarCollapsed ? (
-                <>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold">{firstName}</span>
-                    <span className="block text-xs text-[var(--ink-muted)]">Admin</span>
-                  </span>
-                  <Icon name="chevron" className="h-4 w-4 -rotate-90" />
-                </>
-              ) : null}
+              <span className={cn("flex min-w-0 flex-1 items-center gap-3", sidebarCollapsed && "lg:hidden")}>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold">{firstName}</span>
+                  <span className="block text-xs text-[var(--ink-muted)]">Admin</span>
+                </span>
+                <Icon name="chevron" className="h-4 w-4 shrink-0 -rotate-90" />
+              </span>
             </button>
           </div>
         </div>
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-20 border-b border-[var(--line)] bg-white/95 px-4 py-4 backdrop-blur md:px-8">
-          <div className="flex flex-wrap items-center gap-4 xl:flex-nowrap">
+        <header className="sticky top-0 z-20 border-b border-[var(--line)] bg-white/95 px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur md:px-8">
+          <div className="flex flex-wrap items-center gap-3 xl:flex-nowrap xl:gap-4">
             <Button
               variant="secondary"
-              className="h-12 w-12 rounded-[10px] px-0 lg:hidden"
+              className="h-12 w-12 shrink-0 rounded-[10px] px-0 lg:hidden"
               onClick={() => setMobileOpen((open) => !open)}
               aria-label="Open navigation"
+              aria-expanded={mobileOpen}
             >
               <Icon name="menu" />
             </Button>
@@ -455,11 +505,13 @@ export function AdminShell({
             >
               <Icon name="menu" />
             </button>
-            <div className="min-w-[240px] flex-1">
-              <h1 className="text-2xl font-bold leading-tight tracking-normal">
-                {greeting}, {firstName}
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl font-bold leading-tight tracking-normal sm:text-2xl">
+                <span className="break-words">
+                  {greeting}, {firstName}
+                </span>
               </h1>
-              <p className="text-sm text-[var(--ink-muted)]">
+              <p className="hidden text-sm text-[var(--ink-muted)] sm:block">
                 Here&apos;s what is happening with your team today.
               </p>
             </div>
@@ -492,15 +544,15 @@ export function AdminShell({
                 <span className="grid h-10 w-10 place-items-center rounded-[10px] border border-[var(--line)] bg-white text-[var(--ink)]">
                   <Icon name="calendar" className="h-5 w-5" />
                 </span>
-                <span>
-                  <span className="block font-semibold">{officeLocationLabel}</span>
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{officeLocationLabel}</span>
                   <span className="block text-xs text-[var(--ink-muted)]">
                     {officeDateLabel} · {officeTimeLabel}
                   </span>
                 </span>
               </button>
               {calendarOpen ? (
-                <div className="absolute right-0 top-14 w-80 rounded-[12px] border border-[var(--line)] bg-white p-4 shadow-[0_18px_40px_rgba(20,32,51,0.14)]">
+                <div className="absolute right-0 top-14 w-80 max-w-[calc(100vw-2rem)] rounded-[12px] border border-[var(--line)] bg-white p-4 shadow-[0_18px_40px_rgba(20,32,51,0.14)]">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-semibold">{fullOfficeDate}</p>
@@ -617,8 +669,8 @@ export function AdminShell({
           </div>
         </header>
         {profileEditorOpen ? (
-          <div className="fixed inset-0 z-40 grid place-items-center bg-black/30 px-4 py-6">
-            <div className="w-full max-w-[420px] rounded-[12px] border border-[var(--line)] bg-white p-4 shadow-[0_24px_70px_rgba(20,32,51,0.24)]">
+          <div className="fixed inset-0 z-40 grid place-items-center overflow-y-auto bg-black/30 px-4 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+            <div className="max-h-[min(100dvh-2rem,100svh-2rem)] w-full max-w-[420px] overflow-y-auto rounded-[12px] border border-[var(--line)] bg-white p-4 shadow-[0_24px_70px_rgba(20,32,51,0.24)]">
               <div className="space-y-5">
               <form onSubmit={saveProfile} className="space-y-4">
                 <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
@@ -779,7 +831,7 @@ export function AdminShell({
             </div>
           </div>
         ) : null}
-        <main className="mx-auto max-w-[1600px] px-4 py-6 md:px-8">
+        <main className="mx-auto max-w-[1600px] px-4 py-6 pb-[max(6rem,calc(env(safe-area-inset-bottom)+5.5rem))] md:px-8">
           {children}
         </main>
       </div>

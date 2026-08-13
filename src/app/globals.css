@@ -51,6 +51,8 @@
 html,
 body {
   min-height: 100%;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 body {
@@ -58,6 +60,15 @@ body {
   color: var(--ink);
   font-family: var(--font-body);
   background: var(--bg);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  max-width: 100%;
+  min-width: 0;
 }
 
 a {
